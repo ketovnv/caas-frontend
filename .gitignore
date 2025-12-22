@@ -41,3 +41,4 @@ bun.lockb
 
 # Claude Code local settings
 .claude/settings.local.json
+bun.lock
