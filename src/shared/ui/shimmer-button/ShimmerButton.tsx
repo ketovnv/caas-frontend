@@ -10,7 +10,7 @@ const shimmerConfigs = {
   // Smooth continuous motion
   shimmer: { tension: 40, friction: 20 },
   // Quick press response with bounce
-  press: { tension: 600, friction: 25 },
+  press: { tension: 600, friction: 25, mass: 100, },
   // Smooth hover
   hover: { tension: 400, friction: 30 },
 };
@@ -42,22 +42,22 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
     {
       className,
       children,
-      shimmerColor = '#ffffff',
+      shimmerColor = '#113355',
       shimmerSize = '2px',
       borderRadius = '9999px',
       shimmerSpeed = 2,
-      background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+      background = 'linear-gradient(135deg, #1a1a2e 0%, #000000 100%)',
       disabled,
       ...props
     },
     ref
   ) => {
-    // Shimmer position spring with built-in loop
+    // Shimmer position spring with a built-in loop
     const [shimmerSpring] = useSpring(() => ({
       from: { x: -100 },
       to: { x: 200 },
       loop: true,
-      config: { duration: 2000 / shimmerSpeed },
+      config: { tension: 400, friction: 30, mass: 100/shimmerSpeed },
     }), [shimmerSpeed]);
 
     // Rotation spring with built-in loop
@@ -68,7 +68,7 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
       config: { duration: 3000 / shimmerSpeed },
     }), [shimmerSpeed]);
 
-    // Press/hover spring with bouncy feel
+    // Press/hover spring with a bouncy feel
     const [pressSpring, pressApi] = useSpring(() => ({
       y: 0,
       scale: 1,
