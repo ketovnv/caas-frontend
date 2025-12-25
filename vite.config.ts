@@ -11,15 +11,18 @@ export default defineConfig({
     react(),
     tailwindcss(),
     nodePolyfills({
-      include: ['buffer', 'crypto', 'stream', 'util', 'process', 'events', 'string_decoder'],
+      include: ['buffer', 'crypto', 'stream', 'util','events', 'string_decoder'],
       globals: {
         Buffer: true,
         global: true,
-        process: true,
       },
       protocolImports: true,
     }),
   ],
+  server: {
+    host: '127.0.0.1',
+    port: 3000,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

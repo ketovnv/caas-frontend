@@ -79,8 +79,8 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
     const handleMouseEnter = () => {
       if (!disabled) {
         pressApi.start({
-          scale: 1.02,
-          glow: 1,
+          scale: 1,
+          // glow: 1,
           config: shimmerConfigs.hover,
         });
       }
@@ -98,7 +98,7 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
     const handleMouseDown = () => {
       if (!disabled) {
         pressApi.start({
-          y: 3,
+          y: 1.5,
           scale: 0.97,
           config: shimmerConfigs.press,
         });

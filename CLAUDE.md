@@ -1,138 +1,102 @@
-# CLAUDE.md
+ CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-CaaS (Crypto-as-a-Service) frontend - платформа для криптовалютных операций с фокусом на gas-providing для транзакций. Поддерживает:
-- On/Off-ramp операции (EUR <-> USDC, KZT <-> crypto)
-- OTC обмены через liquidity providers
-- Cross-border переводы (KZT <-> EUR)
-- KYC/KYB верификацию клиентов
-- Управление криптокошельками и фиатными счетами
+CaaS (Crypto-as-a-Service) frontend - a platform for cryptocurrency operations. Currently implements:
+- Web3Auth social login (Google, Facebook, Twitter, Discord, Email, SMS)
+- Tron blockchain integration via TronWeb
+- Animated UI component library built on React Spring
 
 ## Tech Stack
 
 - **Runtime**: Bun
-- **Build**: Vite
-- **Framework**: React + TypeScript
-- **Architecture**: Feature-Sliced Design (FSD)
+- **Build**: Vite (dev server on http://127.0.0.1:3000)
+- **Framework**: React 19 + TypeScript (strict mode)
+- **Styling**: Tailwind CSS 4
+- **Animation**: React Spring (@react-spring/web) + Motion
+- **Auth**: Web3Auth Modal
+- **Blockchain**: TronWeb (Shasta testnet)
+- **Mobile**: Capacitor (Android target)
 
 ## Development Commands
 
 ```bash
 bun install              # Install dependencies
-bun run dev              # Development server (Vite)
-bun run build            # Production build
+bun run dev              # Development server (http://127.0.0.1:3000)
+bun run build            # Production build (runs tsc first)
 bun run preview          # Preview production build
 bun run lint             # ESLint
-bun run typecheck        # TypeScript check
-bun run test             # Run tests
+bun run typecheck        # TypeScript check (tsc --noEmit)
+bun run test             # Run tests (vitest)
 bun run test --watch     # Watch mode
 bun run test path/to/file.test.ts  # Single file
 ```
 
 ## Architecture (Feature-Sliced Design)
 
-Layers import rule: `app → pages → widgets → features → entities → shared`
-Modules can only import from layers **below** them.
+Strict layer imports: `app → pages → widgets → features → entities → shared`
 
 ```
 src/
-├── app/              # App initialization, providers, routing, global styles
-├── pages/            # Full pages, compose widgets and features
-├── widgets/          # Complex UI blocks (Header, Sidebar, TransactionList)
-├── features/         # User interactions (SendCrypto, CreateExchange, KYCForm)
-├── entities/         # Business entities with their data and UI
-└── shared/           # Reusable code without business logic
+├── app/              # App entry, providers (Web3Auth, Router, ErrorBoundary)
+├── pages/            # Route components (home, showcase)
+├── widgets/          # Complex UI blocks (empty - use .gitkeep)
+├── features/         # User interactions (auth, error)
+├── entities/         # Business entities (empty - use .gitkeep)
+└── shared/           # Reusable UI kit and utilities
+    ├── ui/animated/  # React Spring animation components
+    ├── lib/          # cn(), gradient utilities, React Spring re-exports
+    └── config/       # Theme configs (OKLCH color system)
 ```
 
-### Layer Details
+### Path Aliases
 
-**app/** - application entry point, providers, router config
-**pages/** - route components, compose widgets/features, no business logic
-**widgets/** - self-contained UI blocks, combine features and entities
-**features/** - user scenarios and actions (one feature = one use case)
-**entities/** - business domain objects with their model, api, ui
-**shared/** - no business logic, pure utilities and UI kit
+Configured in both vite.config.ts and tsconfig.json:
+- `@/` → `src/`
+- `app/`, `pages/`, `widgets/`, `features/`, `entities/`, `shared/` → `src/{layer}/`
 
-### Segments (inside each slice)
+### Public API Pattern
 
-```
-{slice}/
-├── ui/       # React components, styles
-├── model/    # State, stores, business logic, types
-├── api/      # API requests for this slice
-├── lib/      # Utilities specific to this slice
-├── config/   # Constants, feature flags
-└── index.ts  # Public API (only export what's needed)
-```
-
-### Public API Rule
-
-Every slice must have `index.ts` that exports only public interface:
+Each slice exports through `index.ts`:
 ```typescript
-// entities/client/index.ts
-export { ClientCard } from './ui/ClientCard';
-export { useClient } from './model/useClient';
-export type { Client } from './model/types';
+// features/auth/index.ts
+export { LoginButton } from './ui/LoginButton';
+export { web3AuthContextConfig } from './config/web3auth';
 ```
 
-Import only through public API:
-```typescript
-// ✅ Correct
-import { ClientCard } from 'entities/client';
+Import only from public API, never internal paths.
 
-// ❌ Wrong - accessing internals
-import { ClientCard } from 'entities/client/ui/ClientCard';
-```
+## Key Integrations
 
-### Cross-imports between entities
+### Web3Auth
+- Config: `features/auth/config/web3auth.ts`
+- Uses Sapphire Devnet
+- Requires `VITE_WEB3AUTH_CLIENT_ID` env variable
 
-Use `@x` notation for explicit dependencies:
-```typescript
-// entities/account/@x/client.ts
-export type { Account } from '../model/types';
+### Tron RPC
+- Helper functions in `features/auth/lib/tronRpc.ts`
+- Uses Shasta testnet (`api.shasta.trongrid.io`)
+- Functions: `getTronAccount`, `getTronBalance`, `signMessage`, `sendTransaction`
 
-// entities/client/model/types.ts
-import type { Account } from 'entities/account/@x/client';
-```
+## Animated UI Components
 
-## Domain Entities
+Located in `shared/ui/animated/`:
+- **Card** - Animated card with gradient effects
+- **FlipCard** - 3D flip animation
+- **AnimatedText** - Gradient text with animation
+- **ShimmerButton, MagneticButton, RippleButton** - Interactive buttons
+- **AnimatedInput, SpotlightInput, VanishInput** - Form inputs
+- **AnimatedList, AnimatedTabs, AnimatedCounter** - List/navigation
+- **Skeleton** - Loading states
+- **AsphaltBackground** - Animated background effect
 
-- **Client** - клиент (individual/corporate), KYC status
-- **Account** - внутренний счет (привязан к Currency)
-- **Currency** - валюта (fiat: EUR, KZT / crypto: USDC, USDT)
-- **Wallet** - криптокошелек клиента
-- **Exchange** - операция обмена валют
-- **Deposit** - пополнение счета
-- **Withdrawal** - вывод средств
-- **RampOrder** - on-ramp/off-ramp ордер
-- **LiquidityProvider** - провайдер ликвидности
-
-## Core Business Flows
-
-1. **Auth Flow**: Sign In → Create client `/Customer/otc/create` → Verify `/Customer/{id}` → KYC → Home
-2. **Ramp Flow**: Home → Ramp → Enter amount → QR code → Complete
-3. **Exchange Flow**: Check liquidity → Create Exchange → Tatum order → Complete
-4. **Withdrawal Flow**: Request → 2FA → Balance check → Sumsub KYT → Execute
-
-## Ledger System (Blnk)
-
-Double-entry ledger:
-- **Buckets**: Available, Reserved, Settlement
-- **Transactions**: inflight → commit/void
-
-## External Integrations
-
-- **Sumsub** - KYC/KYT verification
-- **Tatum** - crypto operations
-- **Blnk** - ledger/balances
-- **Utila** - crypto withdrawals
+React Spring re-exports available in `shared/lib/animated.ts` with aliases: `animated`, `a`, `imp`
 
 ## Conventions
 
-- TypeScript strict mode
-- Денежные суммы: `string` или `Decimal` (не `number`)
-- API types in `shared/api/`
-- Path aliases: `@/` → `src/`
+- TypeScript strict mode with `noUncheckedIndexedAccess`
+- Money amounts: use `string` (never `number` for precision)
+- Color system: OKLCH format for theme colors
+- Russian UI text for error messages

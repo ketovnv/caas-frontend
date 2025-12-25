@@ -15,8 +15,7 @@ import {
   SpotlightInput,
   VanishInput,
   // Background
-  AsphaltBackground,
-  // Counter
+
   AnimatedCounter,
   // List
   AnimatedList,
@@ -95,8 +94,7 @@ export function ComponentsShowcase() {
   const [showSkeleton, setShowSkeleton] = useState(true);
 
   return (
-    <AsphaltBackground className="min-h-screen p-8">
-      <div className="max-w-6xl mx-auto space-y-12">
+      <div className="max-w-6xl mx-auto space-y-12 p-8">
         {/* Header */}
         <header className="text-center space-y-2">
           <h1 className="text-4xl font-bold text-white">
@@ -161,7 +159,7 @@ export function ComponentsShowcase() {
               className="h-72"
             >
               {/* Front */}
-              <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-blue-600 to-purple-600 p-6">
+              <div className="flex flex-col items-center justify-center h-full bg-linear-to-br from-blue-600 to-purple-600 p-6">
                 <span className="text-4xl mb-2">💳</span>
                 <h3 className="text-xl font-bold text-white">Flip Me!</h3>
               </div>
@@ -379,6 +377,5 @@ export function ComponentsShowcase() {
           <p>Built with React Spring + Tailwind CSS + FSD</p>
         </footer>
       </div>
-    </AsphaltBackground>
   );
 }

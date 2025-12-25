@@ -1,0 +1,249 @@
+import { useState } from 'react';
+import {
+  TexturedBackground,
+  AsphaltBackground,
+  ConcreteBackground,
+  MetalBackground,
+  GraniteBackground,
+  SandBackground,
+  // FabricBackground,
+  PureNoiseBackground,
+  type TextureType,
+  type ColorScheme,
+} from 'shared/ui/animated/background';
+
+// ============================================================================
+// Demo: All Textures Gallery
+// ============================================================================
+
+const TEXTURE_DEMOS: { texture: TextureType; scheme: ColorScheme; label: string }[] = [
+  { texture: 'asphalt', scheme: 'dark', label: 'Асфальт' },
+  { texture: 'asphalt', scheme: 'charcoal', label: 'Асфальт (Charcoal)' },
+  { texture: 'concrete', scheme: 'midnight', label: 'Бетон' },
+  { texture: 'concrete', scheme: 'light', label: 'Бетон (Light)' },
+  { texture: 'metal', scheme: 'steel', label: 'Металл' },
+  { texture: 'metal', scheme: 'ocean', label: 'Металл (Ocean)' },
+  { texture: 'granite', scheme: 'obsidian', label: 'Гранит' },
+  { texture: 'granite', scheme: 'wine', label: 'Гранит (Wine)' },
+  { texture: 'sand', scheme: 'bronze', label: 'Песок' },
+  { texture: 'sand', scheme: 'copper', label: 'Песок (Copper)' },
+  { texture: 'fabric', scheme: 'forest', label: 'Ткань' },
+  { texture: 'fabric', scheme: 'pearl', label: 'Ткань (Pearl)' },
+];
+
+export function TextureGallery() {
+  return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-8">
+        {TEXTURE_DEMOS.map(({ texture, scheme, label }) => (
+            <TexturedBackground
+                key={`${texture}-${scheme}`}
+                texture={texture}
+                scheme={scheme}
+                className="aspect-video rounded-xl shadow-lg"
+                vignette
+                vignetteIntensity={0.3}
+            >
+              <div className="flex items-center justify-center h-full">
+            <span className="text-white font-medium text-sm drop-shadow-lg">
+              {label}
+            </span>
+              </div>
+            </TexturedBackground>
+        ))}
+
+        {/* Pure CSS variant */}
+        <PureNoiseBackground scheme="dark" intensity="strong" className="aspect-video rounded-xl shadow-lg">
+          <div className="flex items-center justify-center h-full">
+          <span className="text-white font-medium text-sm drop-shadow-lg">
+            Pure CSS (fastest)
+          </span>
+          </div>
+        </PureNoiseBackground>
+          <UsageExamples />
+      </div>
+
+  );
+}
+
+// ============================================================================
+// Usage Examples
+// ============================================================================
+
+export function UsageExamples() {
+  return (
+      <div className="space-y-8 p-8">
+        {/* Basic usage */}
+        <AsphaltBackground className="p-8 rounded-2xl">
+          <h2 className="text-white text-2xl font-bold">Default Asphalt</h2>
+          <p className="text-gray-300 mt-2">Простейший вариант использования</p>
+        </AsphaltBackground>
+
+        {/* With custom scheme */}
+        <ConcreteBackground scheme="ocean" className="p-8 rounded-2xl" innerShadow>
+          <h2 className="text-white text-2xl font-bold">Concrete + Ocean</h2>
+          <p className="text-cyan-200 mt-2">С внутренней тенью для глубины</p>
+        </ConcreteBackground>
+
+        {/* Metal with high vignette */}
+        <MetalBackground
+            className="p-8 rounded-2xl"
+            vignetteIntensity={0.5}
+        >
+          <h2 className="text-white text-2xl font-bold">Brushed Metal</h2>
+          <p className="text-slate-300 mt-2">Усиленный эффект виньетки</p>
+        </MetalBackground>
+
+        {/* Custom gradient override */}
+        <TexturedBackground
+            texture="granite"
+            gradient="bg-gradient-to-r from-purple-900 via-violet-900 to-purple-900"
+            className="p-8 rounded-2xl"
+        >
+          <h2 className="text-white text-2xl font-bold">Custom Gradient</h2>
+          <p className="text-purple-200 mt-2">Кастомный градиент поверх гранита</p>
+        </TexturedBackground>
+
+        {/* Light theme */}
+        <SandBackground scheme="cloud" className="p-8 rounded-2xl">
+          <h2 className="text-gray-900 text-2xl font-bold">Light Sand</h2>
+          <p className="text-gray-600 mt-2">Светлая тема для карточек</p>
+        </SandBackground>
+
+        {/* Full page hero */}
+        <GraniteBackground
+            scheme="wine"
+            className="min-h-[50vh] flex items-center justify-center rounded-2xl"
+            vignette
+            vignetteIntensity={0.4}
+            innerShadow
+        >
+          <div className="text-center">
+            <h1 className="text-white text-5xl font-black tracking-tight">
+              Hero Section
+            </h1>
+            <p className="text-rose-200 mt-4 text-lg">
+              Идеально для лендингов и hero-блоков
+            </p>
+          </div>
+        </GraniteBackground>
+
+        {/* Ultra-performance mode */}
+        <PureNoiseBackground
+            scheme="forest"
+            intensity="medium"
+            className="p-8 rounded-2xl"
+        >
+          <h2 className="text-white text-2xl font-bold">Pure CSS Mode</h2>
+          <p className="text-emerald-200 mt-2">
+            Без SVG — максимальная производительность, ~0ms paint
+          </p>
+        </PureNoiseBackground>
+      </div>
+  );
+}
+
+// ============================================================================
+// Interactive Playground (for Storybook/dev)
+// ============================================================================
+
+export function TexturePlayground() {
+  const [texture, setTexture] = useState<TextureType>('asphalt');
+  const [scheme, setScheme] = useState<ColorScheme>('dark');
+  const [vignette, setVignette] = useState(true);
+  const [vignetteIntensity, setVignetteIntensity] = useState(0.25);
+  const [innerShadow, setInnerShadow] = useState(false);
+
+  const textures: TextureType[] = ['asphalt', 'concrete', 'metal', 'granite', 'sand', 'fabric'];
+  const schemes: ColorScheme[] = [
+    'dark', 'charcoal', 'midnight', 'obsidian',
+    'light', 'cloud', 'pearl',
+    'steel', 'copper', 'bronze', 'ocean', 'forest', 'wine',
+  ];
+
+  return (
+      <div className="p-8 bg-gray-100 min-h-screen">
+        {/* Controls */}
+        <div className="mb-6 p-4 bg-white rounded-xl shadow-sm space-y-4">
+          <div className="flex flex-wrap gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-gray-700">Texture</span>
+              <select
+                  value={texture}
+                  onChange={(e) => setTexture(e.target.value as TextureType)}
+                  className="px-3 py-2 border rounded-lg"
+              >
+                {textures.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-gray-700">Scheme</span>
+              <select
+                  value={scheme}
+                  onChange={(e) => setScheme(e.target.value as ColorScheme)}
+                  className="px-3 py-2 border rounded-lg"
+              >
+                {schemes.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-gray-700">
+              Vignette: {vignetteIntensity.toFixed(2)}
+            </span>
+              <input
+                  type="range"
+                  min="0"
+                  max="0.6"
+                  step="0.05"
+                  value={vignetteIntensity}
+                  onChange={(e) => setVignetteIntensity(parseFloat(e.target.value))}
+                  className="w-32"
+              />
+            </label>
+
+            <label className="flex items-center gap-2 self-end pb-2">
+              <input
+                  type="checkbox"
+                  checked={vignette}
+                  onChange={(e) => setVignette(e.target.checked)}
+              />
+              <span className="text-sm text-gray-700">Vignette</span>
+            </label>
+
+            <label className="flex items-center gap-2 self-end pb-2">
+              <input
+                  type="checkbox"
+                  checked={innerShadow}
+                  onChange={(e) => setInnerShadow(e.target.checked)}
+              />
+              <span className="text-sm text-gray-700">Inner Shadow</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Preview */}
+        <TexturedBackground
+            texture={texture}
+            scheme={scheme}
+            vignette={vignette}
+            vignetteIntensity={vignetteIntensity}
+            innerShadow={innerShadow}
+            className="min-h-[60vh] rounded-2xl shadow-xl flex items-center justify-center"
+        >
+          <div className="text-center p-8">
+            <h1 className="text-white text-4xl font-bold drop-shadow-lg">
+              {texture.charAt(0).toUpperCase() + texture.slice(1)}
+            </h1>
+            <p className="text-white/70 mt-2 text-lg">
+              {scheme} • vignette: {vignetteIntensity.toFixed(2)}
+            </p>
+          </div>
+        </TexturedBackground>
+      </div>
+  );
+}

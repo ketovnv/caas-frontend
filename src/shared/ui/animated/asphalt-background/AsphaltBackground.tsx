@@ -73,7 +73,7 @@ export function AsphaltBackground({
         className={cn(
           'absolute inset-0',
           variant === 'dark'
-            ? 'bg-gradient-to-br from-gray-950 via-gray-850 to-gray-950'
+            ? 'bg-gradient-to-br from-gray-950 via-gray-800 to-gray-950'
             : 'bg-gradient-to-br from-slate-700 via-slate-600 to-slate-700'
         )}
       />
