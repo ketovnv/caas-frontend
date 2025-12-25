@@ -7,6 +7,7 @@ import {DefaultErrorFallback, ErrorBoundary} from 'features/error';
 import {router, AppRouter} from 'app/router';
 import {GraniteBackground, MetalBackground,AsphaltBackground} from "shared/ui/animated/background";
 import {NavLinks} from "widgets/nav-links";
+import {logger} from "shared/lib";
 
 
 // Syncs Web3Auth state → router.isAuthenticated
@@ -22,8 +23,9 @@ const AuthSync = observer(function AuthSync() {
 
 
 export function App() {
+    logger.time('Start...')
+    logger.info(' 🐘Starting App...')
     router.setup()
-    console.log('Starting App...')
     return (
         <ErrorBoundary
             fallback={DefaultErrorFallback}
@@ -32,10 +34,10 @@ export function App() {
             }}
         >
             <Web3AuthProvider config={web3AuthContextConfig}>
-                <AsphaltBackground scheme="charcoal"  innerShadow>
+                <AsphaltBackground scheme="charcoal" innerShadow fixed>
                     <NavLinks/>
                     <AuthSync/>
-                    <main className="flex flex-col items-center">
+                    <main className="flex flex-col items-center min-h-screen px-4 py-16 gap-4">
                         <AppRouter/>
                     </main>
                 </AsphaltBackground>

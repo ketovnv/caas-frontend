@@ -114,6 +114,8 @@ export interface TexturedBackgroundProps {
     vignetteIntensity?: number;
     /** Enable subtle inner shadow */
     innerShadow?: boolean;
+    /** Fixed to viewport (for app-level backgrounds) vs contained (for cards) */
+    fixed?: boolean;
 }
 
 // ============================================================================
@@ -129,18 +131,23 @@ export const TexturedBackground = memo(function TexturedBackground({
                                                                        vignette = false,
                                                                        vignetteIntensity = 0.25,
                                                                        innerShadow = false,
+                                                                       fixed = false,
                                                                    }: TexturedBackgroundProps) {
     const tex = TEXTURES[texture];
     const isDark = ['dark', 'charcoal', 'midnight', 'obsidian', 'steel', 'copper', 'bronze', 'ocean', 'forest', 'wine'].includes(scheme);
 
+    // Position class: fixed for app backgrounds, absolute for cards
+    const posClass = fixed ? 'fixed inset-0' : 'absolute inset-0';
+    const containerClass = fixed ? 'relative min-h-screen w-full' : 'relative overflow-hidden';
+
     return (
-        <div className={cn('relative overflow-hidden', className)}>
+        <div className={cn(containerClass, className)}>
             {/* Base gradient */}
-            <div className={cn('absolute inset-0', gradient ?? COLOR_SCHEMES[scheme])} />
+            <div className={cn(posClass, gradient ?? COLOR_SCHEMES[scheme])} />
 
             {/* Primary noise texture */}
             <div
-                className="absolute inset-0 mix-blend-multiply"
+                className={cn(posClass, 'mix-blend-multiply pointer-events-none')}
                 style={{
                     backgroundImage: `url("${tex.noise}")`,
                     backgroundSize: `${tex.noiseSize}px ${tex.noiseSize}px`,
@@ -150,7 +157,7 @@ export const TexturedBackground = memo(function TexturedBackground({
 
             {/* Secondary grain layer */}
             <div
-                className={cn('absolute inset-0', isDark ? 'mix-blend-overlay' : 'mix-blend-multiply')}
+                className={cn(posClass, 'pointer-events-none', isDark ? 'mix-blend-overlay' : 'mix-blend-multiply')}
                 style={{
                     backgroundImage: `url("${tex.grain}")`,
                     backgroundSize: `${tex.grainSize}px ${tex.grainSize}px`,
@@ -161,7 +168,7 @@ export const TexturedBackground = memo(function TexturedBackground({
             {/* Vignette */}
             {vignette && (
                 <div
-                    className="absolute inset-0 pointer-events-none"
+                    className={cn(posClass, 'pointer-events-none')}
                     style={{
                         background: `radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,${vignetteIntensity}) 100%)`,
                     }}
@@ -171,7 +178,7 @@ export const TexturedBackground = memo(function TexturedBackground({
             {/* Inner shadow (optional depth effect) */}
             {innerShadow && (
                 <div
-                    className="absolute inset-0 pointer-events-none"
+                    className={cn(posClass, 'pointer-events-none')}
                     style={{
                         boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.3), inset 0 -2px 20px rgba(0,0,0,0.2)',
                     }}
@@ -199,6 +206,7 @@ export const AsphaltBackground = memo(function AsphaltBackground({
                                                                      vignette,
                                                                      vignetteIntensity,
                                                                      innerShadow,
+                                                                     fixed,
                                                                  }: PresetProps) {
     return (
         <TexturedBackground
@@ -209,6 +217,7 @@ export const AsphaltBackground = memo(function AsphaltBackground({
             vignette={vignette}
             vignetteIntensity={vignetteIntensity}
             innerShadow={innerShadow}
+            fixed={fixed}
         >
             {children}
         </TexturedBackground>
@@ -224,6 +233,7 @@ export const ConcreteBackground = memo(function ConcreteBackground({
                                                                        vignette,
                                                                        vignetteIntensity,
                                                                        innerShadow,
+                                                                       fixed,
                                                                    }: PresetProps) {
     return (
         <TexturedBackground
@@ -234,6 +244,7 @@ export const ConcreteBackground = memo(function ConcreteBackground({
             vignette={vignette}
             vignetteIntensity={vignetteIntensity}
             innerShadow={innerShadow}
+            fixed={fixed}
         >
             {children}
         </TexturedBackground>
@@ -249,6 +260,7 @@ export const MetalBackground = memo(function MetalBackground({
                                                                  vignette,
                                                                  vignetteIntensity,
                                                                  innerShadow,
+                                                                 fixed,
                                                              }: PresetProps) {
     return (
         <TexturedBackground
@@ -259,6 +271,7 @@ export const MetalBackground = memo(function MetalBackground({
             vignette={vignette}
             vignetteIntensity={vignetteIntensity}
             innerShadow={innerShadow}
+            fixed={fixed}
         >
             {children}
         </TexturedBackground>
@@ -274,6 +287,7 @@ export const GraniteBackground = memo(function GraniteBackground({
                                                                      vignette,
                                                                      vignetteIntensity,
                                                                      innerShadow,
+                                                                     fixed,
                                                                  }: PresetProps) {
     return (
         <TexturedBackground
@@ -284,6 +298,7 @@ export const GraniteBackground = memo(function GraniteBackground({
             vignette={vignette}
             vignetteIntensity={vignetteIntensity}
             innerShadow={innerShadow}
+            fixed={fixed}
         >
             {children}
         </TexturedBackground>
@@ -299,6 +314,7 @@ export const SandBackground = memo(function SandBackground({
                                                                vignette,
                                                                vignetteIntensity,
                                                                innerShadow,
+                                                               fixed,
                                                            }: PresetProps) {
     return (
         <TexturedBackground
@@ -309,6 +325,7 @@ export const SandBackground = memo(function SandBackground({
             vignette={vignette}
             vignetteIntensity={vignetteIntensity}
             innerShadow={innerShadow}
+            fixed={fixed}
         >
             {children}
         </TexturedBackground>
@@ -324,6 +341,7 @@ export const FabricBackground = memo(function FabricBackground({
                                                                    vignette,
                                                                    vignetteIntensity,
                                                                    innerShadow,
+                                                                   fixed,
                                                                }: PresetProps) {
     return (
         <TexturedBackground
@@ -334,6 +352,7 @@ export const FabricBackground = memo(function FabricBackground({
             vignette={vignette}
             vignetteIntensity={vignetteIntensity}
             innerShadow={innerShadow}
+            fixed={fixed}
         >
             {children}
         </TexturedBackground>
@@ -349,6 +368,8 @@ export interface PureNoiseBackgroundProps {
     className?: string;
     scheme?: ColorScheme;
     intensity?: 'subtle' | 'medium' | 'strong';
+    /** Fixed to viewport (for app-level backgrounds) vs contained (for cards) */
+    fixed?: boolean;
 }
 
 /**
@@ -361,17 +382,20 @@ export const PureNoiseBackground = memo(function PureNoiseBackground({
                                                                          className,
                                                                          scheme = 'dark',
                                                                          intensity = 'medium',
+                                                                         fixed = false,
                                                                      }: PureNoiseBackgroundProps) {
     const opacityMap = { subtle: 0.15, medium: 0.25, strong: 0.4 };
+    const posClass = fixed ? 'fixed inset-0' : 'absolute inset-0';
+    const containerClass = fixed ? 'relative min-h-screen w-full' : 'relative overflow-hidden';
 
     return (
-        <div className={cn('relative overflow-hidden', className)}>
+        <div className={cn(containerClass, className)}>
             {/* Base */}
-            <div className={cn('absolute inset-0', COLOR_SCHEMES[scheme])} />
+            <div className={cn(posClass, COLOR_SCHEMES[scheme])} />
 
             {/* Pseudo-noise via repeating gradients */}
             <div
-                className="absolute inset-0 pointer-events-none"
+                className={cn(posClass, 'pointer-events-none')}
                 style={{
                     opacity: opacityMap[intensity],
                     backgroundImage: `
@@ -384,7 +408,7 @@ export const PureNoiseBackground = memo(function PureNoiseBackground({
             />
 
             {/* Vignette */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.2)_100%)] pointer-events-none" />
+            <div className={cn(posClass, 'bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.2)_100%)] pointer-events-none')} />
 
             <div className="relative z-10">{children}</div>
         </div>

@@ -6,7 +6,17 @@
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
+  width: 100%;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+/* Prevent horizontal scroll from 100vw on scrollbar */
+body {
+  overflow-x: hidden;
 }
 
 body {

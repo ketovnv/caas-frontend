@@ -1,7 +1,15 @@
 // Router - Public API
 export { router } from 'app/router/model';
 export { AppRouter } from 'app/router/ui';
-export { routeConfigs, getTransitionConfig, DEFAULT_ROUTE } from 'app/router/config';
+export {
+  routeConfigs,
+  getTransitionConfig,
+  getRouteDistance,
+  getNextRoute,
+  getPrevRoute,
+  NAVIGATION_ORDER,
+  DEFAULT_ROUTE,
+} from 'app/router/config';
 
 export type {
   Route,

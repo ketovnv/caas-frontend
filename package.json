@@ -24,6 +24,7 @@
     "@capacitor/status-bar": "^8.0.0",
     "@capgo/capacitor-native-biometric": "^8.0.3",
     "@react-spring/web": "^10.0.3",
+    "@use-gesture/react": "^10.3.1",
     "@web3auth/modal": "^10.10.0",
     "mobx": "^6.15.0",
     "mobx-react-lite": "^4.1.1",

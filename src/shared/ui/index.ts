@@ -38,3 +38,7 @@ export {
     type SkeletonProps,
     type SkeletonRef
 } from './animated';
+
+export {
+    FPSMonitor
+} from './fps-monitor';

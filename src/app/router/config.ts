@@ -11,6 +11,10 @@ export const routeConfigs: Record<Route, RouteConfig> = {
     requiresAuth: false,
     title: 'CaaS - Components',
   },
+  textures: {
+    requiresAuth: false,
+    title: 'CaaS - Textures',
+  },
 
   // Protected routes
   wallet: {
@@ -22,10 +26,6 @@ export const routeConfigs: Record<Route, RouteConfig> = {
     requiresAuth: true,
     redirectTo: 'home',
     title: 'CaaS - Exchange',
-  },
-  textures: {
-    requiresAuth: true,
-    title: 'CaaS - Textures',
   },
   settings: {
     requiresAuth: true,
@@ -40,16 +40,64 @@ export const routeConfigs: Record<Route, RouteConfig> = {
   },
 };
 
-// Route hierarchy for determining transition direction
-// Lower index = "earlier" in flow, higher = "deeper"
-const routeOrder: Route[] = [
+/**
+ * Navigation order for swipe gestures
+ * Pages are arranged in a horizontal line for swipe navigation
+ */
+export const NAVIGATION_ORDER: Route[] = [
   'home',
   'showcase',
+  'textures',
   'wallet',
   'exchange',
   'settings',
-  'not-found',
 ];
+
+/**
+ * Get index of route in navigation order
+ */
+export function getRouteIndex(route: Route): number {
+  const index = NAVIGATION_ORDER.indexOf(route);
+  return index === -1 ? 0 : index;
+}
+
+/**
+ * Get distance between two routes (for animation type selection)
+ * Returns: 0 = same, 1 = neighbor, 2+ = far
+ */
+export function getRouteDistance(from: Route | null, to: Route): number {
+  if (!from || from === to) return 0;
+
+  const fromIndex = getRouteIndex(from);
+  const toIndex = getRouteIndex(to);
+
+  return Math.abs(toIndex - fromIndex);
+}
+
+/**
+ * Check if routes are neighbors (distance = 1)
+ */
+export function areNeighbors(from: Route | null, to: Route): boolean {
+  return getRouteDistance(from, to) === 1;
+}
+
+/**
+ * Get next route in navigation order
+ */
+export function getNextRoute(current: Route): Route | null {
+  const index = getRouteIndex(current);
+  const next = NAVIGATION_ORDER[index + 1];
+  return next ?? null;
+}
+
+/**
+ * Get previous route in navigation order
+ */
+export function getPrevRoute(current: Route): Route | null {
+  const index = getRouteIndex(current);
+  const prev = NAVIGATION_ORDER[index - 1];
+  return prev ?? null;
+}
 
 /**
  * Get transition type based on route relationship
@@ -57,16 +105,18 @@ const routeOrder: Route[] = [
 export function getTransitionType(from: Route | null, to: Route): TransitionType {
   if (!from || from === to) return 'none';
 
-  const fromIndex = routeOrder.indexOf(from);
-  const toIndex = routeOrder.indexOf(to);
+  const distance = getRouteDistance(from, to);
+  const fromIndex = getRouteIndex(from);
+  const toIndex = getRouteIndex(to);
+  const direction = toIndex > fromIndex ? 1 : -1;
 
-  // Forward = going deeper into app
-  if (toIndex > fromIndex) return 'slide-left';
+  // Neighbors: simple slide
+  if (distance === 1) {
+    return direction > 0 ? 'slide-left' : 'slide-right';
+  }
 
-  // Back = going to earlier route
-  if (toIndex < fromIndex) return 'slide-right';
-
-  return 'fade';
+  // Far pages: scale/flip effect
+  return 'scale';
 }
 
 /**
@@ -74,10 +124,11 @@ export function getTransitionType(from: Route | null, to: Route): TransitionType
  */
 export function getTransitionConfig(from: Route | null, to: Route): TransitionConfig {
   const type = getTransitionType(from, to);
+  const distance = getRouteDistance(from, to);
 
   return {
     type,
-    duration: type === 'none' ? 0 : 300,
+    duration: type === 'none' ? 0 : distance === 1 ? 250 : 400,
   };
 }
 
