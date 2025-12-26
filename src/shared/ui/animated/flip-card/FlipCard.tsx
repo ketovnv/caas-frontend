@@ -72,22 +72,16 @@ export const FlipCard = forwardRef<FlipCardRef, FlipCardProps>(
     ref
   ) => {
     const [flipped, setFlipped] = useState(false);
-    const [isHovering, setIsHovering] = useState(false);
 
     // Main flip spring with satisfying physics
     const [flipSpring, flipApi] = useSpring(() => ({
       rotateX: 0,
       rotateY: 0,
       scale: 1,
+      y: 0,
+      shadow: 10,
       config: flipConfigs.flip,
     }));
-
-    // Subtle hover lift effect
-    const [hoverSpring] = useSpring(() => ({
-      y: isHovering ? -8 : 0,
-      shadow: isHovering ? 25 : 10,
-      config: flipConfigs.hover,
-    }), [isHovering]);
 
     // Imperative methods
     useImperativeHandle(ref, () => ({
@@ -126,10 +120,18 @@ export const FlipCard = forwardRef<FlipCardRef, FlipCardProps>(
           rotateX: rotate === 'x' ? (shouldFlip ? 180 : 0) : 0,
           rotateY: rotate === 'y' ? (shouldFlip ? 180 : 0) : 0,
           scale: shouldFlip ? 1.02 : 1,
+          y: shouldFlip ? -8 : 0,
+          shadow: shouldFlip ? 25 : 10,
           config: flipConfigs.flip,
         });
+      } else {
+        // Just hover lift without flip
+        flipApi.start({
+          y: shouldFlip ? -8 : 0,
+          shadow: shouldFlip ? 25 : 10,
+          config: flipConfigs.hover,
+        });
       }
-      setIsHovering(shouldFlip);
     };
 
     const handleClick = () => {
@@ -160,7 +162,7 @@ export const FlipCard = forwardRef<FlipCardRef, FlipCardProps>(
         className={cn('h-72 w-56 cursor-pointer', className)}
         style={{
           perspective: 1200,
-          translateY: hoverSpring.y,
+          transform: flipSpring.y.to(y => `translateY(${y}px)`),
         }}
         onMouseEnter={() => handleFlip(true)}
         onMouseLeave={() => handleFlip(false)}
@@ -190,7 +192,7 @@ export const FlipCard = forwardRef<FlipCardRef, FlipCardProps>(
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
-              boxShadow: hoverSpring.shadow.to(
+              boxShadow: flipSpring.shadow.to(
                 (s) => `0 ${s}px ${s * 2}px rgba(0,0,0,0.3)`
               ),
             }}
@@ -209,7 +211,7 @@ export const FlipCard = forwardRef<FlipCardRef, FlipCardProps>(
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: rotate === 'x' ? 'rotateX(180deg)' : 'rotateY(180deg)',
-              boxShadow: hoverSpring.shadow.to(
+              boxShadow: flipSpring.shadow.to(
                 (s) => `0 ${s}px ${s * 2}px rgba(0,0,0,0.3)`
               ),
             }}

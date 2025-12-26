@@ -1,19 +1,6 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { useSpring, animated, to } from '@react-spring/web';
 import { cn } from 'shared/lib';
-
-// ============================================================================
-// Custom spring configs for shimmer
-// ============================================================================
-
-const shimmerConfigs = {
-  // Smooth continuous motion
-  shimmer: { tension: 40, friction: 20 },
-  // Quick press response with bounce
-  press: { tension: 600, friction: 25, mass: 100, },
-  // Smooth hover
-  hover: { tension: 400, friction: 30 },
-};
 
 // ============================================================================
 // Types
@@ -23,14 +10,18 @@ export interface ShimmerButtonProps extends ButtonHTMLAttributes<HTMLButtonEleme
   children: ReactNode;
   /** Shimmer color (CSS color value) */
   shimmerColor?: string;
-  /** Border size for the shimmer gap */
+  /** Shimmer spread angle in degrees */
+  shimmerSpread?: number;
+  /** Border gap size for the shimmer */
   shimmerSize?: string;
   /** Border radius */
   borderRadius?: string;
-  /** Shimmer animation speed (lower = faster) */
-  shimmerSpeed?: number;
+  /** Animation duration in seconds */
+  shimmerDuration?: number;
   /** Background color/gradient */
   background?: string;
+  /** Blur amount for shimmer glow */
+  shimmerBlur?: number;
 }
 
 // ============================================================================
@@ -42,46 +33,91 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
     {
       className,
       children,
-      shimmerColor = '#113355',
-      shimmerSize = '2px',
-      borderRadius = '9999px',
-      shimmerSpeed = 2,
-      background = 'linear-gradient(135deg, #1a1a2e 0%, #000000 100%)',
+      shimmerColor = '#ffffff',
+      shimmerSpread = 90,
+      shimmerSize = '0.1em',
+      borderRadius = '100px',
+      shimmerDuration = 3,
+      background = 'rgba(0, 0, 0, 1)',
+      shimmerBlur = 8,
       disabled,
       ...props
     },
     ref
   ) => {
-    // Shimmer position spring with a built-in loop
-    const [shimmerSpring] = useSpring(() => ({
-      from: { x: -100 },
-      to: { x: 200 },
-      loop: true,
-      config: { tension: 400, friction: 30, mass: 100/shimmerSpeed },
-    }), [shimmerSpeed]);
+    const isMounted = useRef(true);
 
-    // Rotation spring with built-in loop
-    const [rotateSpring] = useSpring(() => ({
-      from: { rotate: 0 },
-      to: { rotate: 360 },
-      loop: true,
-      config: { duration: 3000 / shimmerSpeed },
-    }), [shimmerSpeed]);
+    // Combined animation spring for both slide and spin
+    const [animSpring, animApi] = useSpring(() => ({
+      slide: 0,
+      spin: 0,
+      config: { duration: shimmerDuration * 1000 },
+    }));
 
-    // Press/hover spring with a bouncy feel
+    // Press/hover spring
     const [pressSpring, pressApi] = useSpring(() => ({
       y: 0,
       scale: 1,
-      glow: 0,
-      config: shimmerConfigs.press,
+      innerShadowY: 8,
+      innerShadowBlur: 10,
+      innerShadowOpacity: 0.15,
+      config: { tension: 300, friction: 20 },
     }));
+
+    // Animation loops using requestAnimationFrame for smoother performance
+    useEffect(() => {
+      isMounted.current = true;
+      let slideDirection = 1;
+
+      const slideMs = shimmerDuration * 1000;
+      const spinMs = shimmerDuration * 2 * 1000;
+
+      // Slide animation - ping-pong
+      const runSlide = () => {
+        if (!isMounted.current) return;
+
+        animApi.start({
+          slide: slideDirection,
+          config: { duration: slideMs },
+          onRest: () => {
+            if (isMounted.current) {
+              slideDirection = slideDirection === 1 ? 0 : 1;
+              runSlide();
+            }
+          },
+        });
+      };
+
+      // Spin animation - continuous loop
+      const runSpin = () => {
+        if (!isMounted.current) return;
+
+        animApi.set({ spin: 0 });
+        animApi.start({
+          spin: 1,
+          config: { duration: spinMs },
+          onRest: () => {
+            if (isMounted.current) {
+              runSpin();
+            }
+          },
+        });
+      };
+
+      runSlide();
+      runSpin();
+
+      return () => {
+        isMounted.current = false;
+        animApi.stop();
+      };
+    }, [shimmerDuration, animApi]);
 
     const handleMouseEnter = () => {
       if (!disabled) {
         pressApi.start({
-          scale: 1,
-          // glow: 1,
-          config: shimmerConfigs.hover,
+          innerShadowY: 6,
+          innerShadowOpacity: 0.24,
         });
       }
     };
@@ -90,17 +126,19 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
       pressApi.start({
         y: 0,
         scale: 1,
-        glow: 0,
-        config: shimmerConfigs.hover,
+        innerShadowY: 8,
+        innerShadowOpacity: 0.12,
       });
     };
 
     const handleMouseDown = () => {
       if (!disabled) {
         pressApi.start({
-          y: 1.5,
-          scale: 0.97,
-          config: shimmerConfigs.press,
+          y: 1,
+          scale: 0.98,
+          innerShadowY: 10,
+          innerShadowOpacity: 0.24,
+          config: { tension: 600, friction: 25 },
         });
       }
     };
@@ -108,20 +146,58 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
     const handleMouseUp = () => {
       pressApi.start({
         y: 0,
-        scale: 1.02,
-        config: shimmerConfigs.press,
+        scale: 1,
+        config: { tension: 400, friction: 20 },
       });
     };
 
-    // Combine transforms properly
-    const transform = to(
+    // Transform interpolation
+    const buttonTransform = to(
       [pressSpring.y, pressSpring.scale],
       (y, s) => `translateY(${y}px) scale(${s})`
     );
 
-    const boxShadow = pressSpring.glow.to(
-      (g) => `0 0 ${g * 20}px ${g * 8}px ${shimmerColor}33`
+    // Inner shadow interpolation
+    const innerShadow = to(
+      [pressSpring.innerShadowY, pressSpring.innerShadowBlur, pressSpring.innerShadowOpacity],
+      (y, blur, opacity) => `inset 0 -${y}px ${blur}px rgba(255, 255, 255, ${opacity})`
     );
+
+    // Shimmer slide transform - moves shimmer across button width
+    const shimmerSlideTransform = animSpring.slide.to(
+      (p) => `translate(calc(${p * 100}cqw - ${p * 100}%), 0)`
+    );
+
+    // Stepped rotation matching original CSS keyframes:
+    // 0% -> 0deg, 15% -> 90deg, 35% -> 90deg (hold), 65% -> 270deg, 85% -> 270deg (hold), 100% -> 360deg
+    const shimmerRotation = animSpring.spin.to((p) => {
+      let degrees: number;
+      if (p < 0.15) {
+        // 0% to 15%: 0deg → 90deg
+        degrees = (p / 0.15) * 90;
+      } else if (p < 0.35) {
+        // 15% to 35%: hold at 90deg
+        degrees = 90;
+      } else if (p < 0.65) {
+        // 35% to 65%: 90deg → 270deg
+        degrees = 90 + ((p - 0.35) / 0.30) * 180;
+      } else if (p < 0.85) {
+        // 65% to 85%: hold at 270deg
+        degrees = 270;
+      } else {
+        // 85% to 100%: 270deg → 360deg
+        degrees = 270 + ((p - 0.85) / 0.15) * 90;
+      }
+      return `rotate(${degrees}deg)`;
+    });
+
+    // Conic gradients for shimmer effect
+    // Main shimmer - wedge-shaped highlight with sharp edges
+    const halfSpread = shimmerSpread * 0.5;
+    // Gradient: transparent → shimmerColor (over spread degrees) → instant cut to transparent
+    const shimmerGradient = `conic-gradient(from ${270 - halfSpread}deg, transparent 0deg, ${shimmerColor} ${shimmerSpread}deg, transparent ${shimmerSpread}deg)`;
+    // Tighter highlight for the bright center streak
+    const highlightGradient = `conic-gradient(from ${270 - halfSpread * 0.5}deg, transparent 0deg, ${shimmerColor} ${shimmerSpread * 0.5}deg, transparent ${shimmerSpread * 0.5}deg)`;
 
     return (
       <animated.button
@@ -129,15 +205,16 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
         disabled={disabled}
         className={cn(
           'group relative z-0 flex cursor-pointer items-center justify-center overflow-hidden',
-          'whitespace-nowrap px-6 py-3 text-white font-medium',
+          'whitespace-nowrap border border-white/10 px-6 py-3 text-white',
+          'transform-gpu transition-transform duration-300 ease-in-out',
+          'active:translate-y-px',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           className
         )}
         style={{
           background,
           borderRadius,
-          transform,
-          boxShadow,
+          transform: buttonTransform,
         }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -145,51 +222,74 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
         onMouseUp={handleMouseUp}
         {...props}
       >
-        {/* Shimmer border effect */}
-        <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
+        {/* Shimmer glow layer - blurred for ambient effect */}
+        <div
+          className="absolute -z-30 inset-0 overflow-visible pointer-events-none"
+          style={{
+            containerType: 'size',
+            filter: `blur(${shimmerBlur}px)`,
+          }}
+        >
           <animated.div
-            className="absolute inset-0 blur-[2px]"
+            className="absolute inset-0"
             style={{
-              transform: shimmerSpring.x.to((x) => `translateX(${x}%)`),
+              height: '100cqh',
+              aspectRatio: '1',
+              transform: shimmerSlideTransform,
             }}
           >
             <animated.div
-              className="absolute -inset-full aspect-square"
+              className="absolute -inset-full w-auto"
               style={{
-                transform: rotateSpring.rotate.to((r) => `rotate(${r}deg)`),
-                background: `conic-gradient(from 270deg, transparent 0deg, ${shimmerColor} 90deg, transparent 90deg)`,
+                background: shimmerGradient,
+                transform: shimmerRotation,
               }}
             />
           </animated.div>
         </div>
 
-        {/* Inner background (creates the gap/border effect) */}
+        {/* Sharp shimmer highlight layer - minimal blur for defined streak */}
         <div
-          className="absolute z-[-1] rounded-[inherit]"
+          className="absolute -z-30 inset-0 overflow-visible pointer-events-none"
           style={{
-            background,
-            inset: shimmerSize,
+            containerType: 'size',
+            filter: `blur(${Math.max(2, shimmerBlur * 0.25)}px)`,
+          }}
+        >
+          <animated.div
+            className="absolute inset-0"
+            style={{
+              height: '100cqh',
+              aspectRatio: '1',
+              transform: shimmerSlideTransform,
+            }}
+          >
+            <animated.div
+              className="absolute -inset-full w-auto"
+              style={{
+                background: highlightGradient,
+                transform: shimmerRotation,
+              }}
+            />
+          </animated.div>
+        </div>
+
+        {/* Inner shadow overlay for depth */}
+        <animated.div
+          className="absolute inset-0 rounded-[inherit] pointer-events-none"
+          style={{
+            boxShadow: innerShadow,
           }}
         />
 
-        {/* Highlight overlay */}
+        {/* Inner background - creates the glowing border gap effect */}
         <div
-          className={cn(
-            'absolute inset-0 rounded-[inherit]',
-            'bg-gradient-to-b from-white/20 to-transparent opacity-0',
-            'group-hover:opacity-100 transition-opacity duration-300'
-          )}
-        />
-
-        {/* Shadow overlay */}
-        <div
-          className={cn(
-            'absolute inset-0 rounded-[inherit]',
-            'shadow-[inset_0_-8px_10px_rgba(255,255,255,0.1)]',
-            'group-hover:shadow-[inset_0_-6px_10px_rgba(255,255,255,0.15)]',
-            'group-active:shadow-[inset_0_-10px_10px_rgba(255,255,255,0.2)]',
-            'transition-shadow duration-200'
-          )}
+          className="absolute -z-20"
+          style={{
+            background,
+            borderRadius,
+            inset: shimmerSize,
+          }}
         />
 
         {/* Content */}

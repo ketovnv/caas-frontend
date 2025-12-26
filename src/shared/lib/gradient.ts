@@ -1,257 +1,316 @@
-import chroma from "chroma-js";
-
+import chroma from 'chroma-js';
 import {
-    ThemeConfig,
-    redGradientDark,
-    redGradientLight,
-    STANDART_DARK,
-    STANDART_LIGHT,
-    RAINBOWGRADIENT,
-    RAINBOWGRADIENT2,
-    HEXCOLORSGRADIENT,
-    SPECTRALGRADIENTOKLCH,
-} from "shared/config";
+  type ThemeConfig,
+  type OklchTuple,
+  type GradientConfig,
+  oklchToString,
+  STANDART_DARK,
+  STANDART_LIGHT,
+  RED_GRADIENT_DARK,
+  RED_GRADIENT_LIGHT,
+  SPECTRAL_GRADIENT,
+  RAINBOW_GRADIENT,
+} from 'shared/config';
 
-export type OklchColor = [number, number, number];
+// ============================================================================
+// Re-export types
+// ============================================================================
+
+export type { OklchTuple, GradientConfig, ThemeConfig };
+export { oklchToString };
+
+// ============================================================================
+// Theme interface (rendered CSS strings)
+// ============================================================================
+
 export interface Theme {
-    color: string
-    accentColor: string
-    background: string
-    buttonBackground: string
-    boxShadow: string
-    navBarButtonBackground: string
-    buttonStartColor: string
-    buttonStopColor: string
-    buttonTextColors: Array<String>
-    buttonActiveTextColors: Array<String>
-    navBarButtonTextColors: Array<String>
-    navBarButtonActiveTextColors: Array<String>
-    redGradientColors: Array<String>
+  color: string;
+  accentColor: string;
+  background: string;
+  buttonBackground: string;
+  boxShadow: string;
+  navBarButtonBackground: string;
+  buttonStartColor: string;
+  buttonStopColor: string;
+  buttonTextColors: string[];
+  buttonActiveTextColors: string[];
+  navBarButtonTextColors: string[];
+  navBarButtonActiveTextColors: string[];
+  redGradientColors: string[];
 }
 
-class gradient {
-    private static gradientCache = new Map<string, string>();
-    private static parsedColorCache = new Map<string, OklchColor[]>();
+// ============================================================================
+// OKLCH Math Utilities
+// ============================================================================
 
-    static getStandartTheme(isDark: boolean): Theme {
-        const theme: ThemeConfig = isDark ? STANDART_DARK : STANDART_LIGHT;
+/**
+ * Interpolate hue on the shortest path around the color wheel
+ */
+export function lerpHue(h1: number, h2: number, t: number): number {
+  let diff = h2 - h1;
 
-        const themeBackground = this.circleGradient(
-            theme.backgroundColorsAngles[0],
-            theme.backgroundColorsAngles[1],
-            theme.backgroundColorsAngles[2],
-            theme.backgroundColorsAngles[3]
-        );
+  // Shortest path around the wheel
+  if (diff > 180) diff -= 360;
+  else if (diff < -180) diff += 360;
 
-        const buttonBackground = this.circleGradient(
-            theme.buttonColorsAngles[0],
-            theme.buttonColorsAngles[1],
-            theme.buttonColorsAngles[2],
-            theme.buttonColorsAngles[3]
-        );
-
-        return {
-            color: theme.color,
-            background: themeBackground,
-            buttonBackground,
-            accentColor: theme.accentColor,
-            boxShadow: theme.boxShadow,
-
-            // background: "transparent",
-            navBarButtonBackground: theme.navBarButtonBackground,
-            buttonStartColor: theme.buttonColorsAngles[0][0],
-            buttonStopColor: theme.buttonColorsAngles[0][3],
-            buttonTextColors: theme.buttonTextColors,
-            buttonActiveTextColors: theme.buttonActiveTextColors,
-            navBarButtonTextColors: theme.navBarButtonTextColors,
-            navBarButtonActiveTextColors: theme.navBarButtonActiveTextColors,
-            redGradientColors: isDark ? redGradientDark : redGradientLight,
-        };
-    }
-
-    // Оптимизированная интерполяция с правильной обработкой hue и chroma
-    static interpolate(
-        color1: OklchColor,
-        color2: OklchColor,
-        t: number,
-    ): OklchColor {
-        const l = color1.l + (color2.l - color1.l) * t;
-
-        // 🎨 УМНАЯ ИНТЕРПОЛЯЦИЯ CHROMA:
-        // Для ахроматических переходов (серый↔чёрный↔белый) используем
-        // агрессивное подавление chroma, чтобы избежать коричневых оттенков
-        const maxChroma = Math.max(color1.c, color2.c);
-        const isNearGray = maxChroma < 0.08; // Повышенный порог для лучшего определения
-
-        let c;
-        if (isNearGray) {
-            // Для ахроматических переходов: используем квадратичное затухание
-            // Это даёт ОЧЕНЬ быстрое падение насыщенности в начале анимации
-            const easedT = 1 - Math.pow(1 - t, 4); // quartic ease-out
-            c = Math.min(color1.c, color2.c) * (1 - easedT);
-            // Дополнительно: ограничиваем максимальный chroma на 0.01
-            c = Math.min(c, 0.01);
-        } else {
-            // Для цветных переходов: обычная линейная интерполяция
-            c = color1.c + (color2.c - color1.c) * t;
-        }
-
-        // Оптимизация: избегаем лишних проверок hue
-        let h = color1.h;
-        if (Math.abs(color1.h - color2.h) > 0.01) {
-            let diff = color2.h - color1.h;
-            // Кратчайший путь по цветовому кругу
-            if (diff > 180) {
-                diff -= 360;
-            } else if (diff < -180) {
-                diff += 360;
-            }
-            h = (color1.h + diff * t + 360) % 360; // Нормализуем в 0-360
-        }
-
-        return {l, c, h};
-    }
-
-    // Мемоизированный парсинг цветов
-    static parsedColors(colors: string[]): OklchColor[] {
-        const cacheKey = colors.join("|");
-
-        const cached = this.parsedColorCache.get(cacheKey);
-        if (cached) {
-            return cached;
-        }
-
-        const parsed = colors.map((color) => {
-            try {
-                const [l, c, h] = chroma(color).oklch();
-                return {
-                    l: l || 0,
-                    c: c || 0,
-                    h: isNaN(h) ? 0 : h,
-                };
-            } catch (e) {
-                console.warn(`Failed to parse color: ${color}`, e);
-                return {l: 0, c: 0, h: 0};
-            }
-        });
-
-        this.parsedColorCache.set(cacheKey, parsed);
-        return parsed;
-    }
-
-    // Оптимизированная интерполяция массива
-    static arrayInterpolate(colors: string[], steps: number): string[] {
-        if (colors.length === 0) return [];
-        if (colors.length === 1) return Array(steps).fill(colors[0]);
-
-        const resultColors: string[] = [];
-        const parsedColorsArray = this.parsedColors(colors);
-        const segments = parsedColorsArray.length - 1;
-
-        // Равномерное распределение шагов
-        const stepsPerSegment = Math.max(1, Math.floor((steps - 1) / segments));
-        const remainingSteps = (steps - 1) % segments;
-
-        for (let i = 0; i < segments; i++) {
-            const color1 = parsedColorsArray[i];
-            const color2 = parsedColorsArray[i + 1];
-
-            // Добавляем дополнительный шаг к первым сегментам для равномерности
-            const segmentSteps = stepsPerSegment + (i < remainingSteps ? 1 : 0);
-
-            for (let j = 0; j < segmentSteps; j++) {
-                const t = j / segmentSteps;
-                const interpolated = this.interpolate(color1, color2, t);
-                resultColors.push(
-                    `oklch(${interpolated.l.toFixed(3)} ${interpolated.c.toFixed(3)} ${interpolated.h.toFixed(1)})`,
-                );
-            }
-        }
-
-        // Добавляем последний цвет
-        const lastColor = parsedColorsArray[parsedColorsArray.length - 1];
-        resultColors.push(
-            `oklch(${lastColor.l.toFixed(3)} ${lastColor.c.toFixed(3)} ${lastColor.h.toFixed(1)})`,
-        );
-
-        return resultColors;
-    }
-
-    static createOklchGradient(colors: string[], steps: number): string {
-        const cacheKey = `gradient_${colors.join("|")}_${steps}`;
-
-        const cached = this.gradientCache.get(cacheKey);
-        if (cached) {
-            return cached;
-        }
-
-        const resultColors = this.arrayInterpolate(colors, steps);
-
-        // Корректируем количество цветов
-        while (resultColors.length > steps) {
-            resultColors.pop();
-        }
-
-        while (resultColors.length < steps && resultColors.length > 0) {
-            resultColors.push(resultColors[resultColors.length - 1]);
-        }
-
-        const gradient = resultColors.join(", ");
-        this.gradientCache.set(cacheKey, gradient);
-
-        return gradient;
-    }
-
-    static blackWhiteGradient(isDark: boolean) {
-        return this.linearAngleGradient(
-            isDark
-                ? ["oklch(1 0 0)", "oklch(0 0 0)"]
-                : ["oklch(0 0 0)", "oklch(1 0 0)"],
-            16,
-            0,
-        );
-    }
-
-    static circleGradient(
-        colors: Array<String>,
-        angle: number,
-        angleTwo: number,
-        number = 16,
-    ): string {
-
-        // logger.logRandomColors("to chroma", colors);
-        return `radial-gradient(in oklch circle at ${angle}% ${angleTwo}%, ${this.createOklchGradient(colors, number)})`;
-    }
-
-    static linearAngleGradient(
-        colors: Array<string>,
-        angle: number,
-        number = 32,
-    ) {
-        return `linear-gradient(${angle}deg in oklch, ${this.createOklchGradient(colors, number)})`;
-    }
-
-    static averageOklch(colors: Array<string>) {
-        return chroma.average(colors, "oklch");
-    }
-
-    static averageHex(colors: Array<string>) {
-        return chroma.average(colors, "hex");
-    }
-
-    static chromaSpectral() {
-        return chroma.scale("Spectral").domain([1, 0]);
-    }
+  return ((h1 + diff * t) % 360 + 360) % 360;
 }
+
+/**
+ * Interpolate between two OKLCH colors
+ */
+export function lerpOklch(c1: OklchTuple, c2: OklchTuple, t: number): OklchTuple {
+  return [
+    c1[0] + (c2[0] - c1[0]) * t,  // L - linear
+    c1[1] + (c2[1] - c1[1]) * t,  // C - linear
+    lerpHue(c1[2], c2[2], t),      // H - shortest path
+  ];
+}
+
+/**
+ * Interpolate between two arrays of OKLCH colors
+ */
+export function lerpOklchArrays(
+  from: OklchTuple[],
+  to: OklchTuple[],
+  t: number
+): OklchTuple[] {
+  const length = Math.max(from.length, to.length);
+  const result: OklchTuple[] = [];
+
+  for (let i = 0; i < length; i++) {
+    const c1 = from[i] || from[from.length - 1] || [0, 0, 0];
+    const c2 = to[i] || to[to.length - 1] || [0, 0, 0];
+    result.push(lerpOklch(c1 as OklchTuple, c2 as OklchTuple, t));
+  }
+
+  return result;
+}
+
+// ============================================================================
+// Gradient Utilities Class
+// ============================================================================
+
+class GradientUtils {
+  private gradientCache = new Map<string, string>();
+  private spreadCache = new Map<string, OklchTuple[]>();
+
+  // ---------------------------------------------------------------------------
+  // Spread: expand colors to N steps (pure math, no chroma during animation)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Spread colors to N steps using linear interpolation in OKLCH space.
+   * This is the key function - call it ONCE to precompute, then animate between results.
+   */
+  spread(colors: OklchTuple[], steps: number = 128): OklchTuple[] {
+    if (colors.length === 0) return [];
+    if (colors.length === 1) return Array(steps).fill(colors[0]);
+
+    const cacheKey = `spread_${JSON.stringify(colors)}_${steps}`;
+    const cached = this.spreadCache.get(cacheKey);
+    if (cached) return cached;
+
+    const result: OklchTuple[] = [];
+    const segments = colors.length - 1;
+
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const segmentFloat = t * segments;
+      const segmentIndex = Math.min(Math.floor(segmentFloat), segments - 1);
+      const segmentT = segmentFloat - segmentIndex;
+
+      const c1 = colors[segmentIndex]!;
+      const c2 = colors[segmentIndex + 1]!;
+
+      result.push(lerpOklch(c1, c2, segmentT));
+    }
+
+    this.spreadCache.set(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * Spread colors and return as CSS strings
+   */
+  spreadStrings(colors: OklchTuple[], steps: number = 128): string[] {
+    return this.spread(colors, steps).map(oklchToString);
+  }
+
+  // ---------------------------------------------------------------------------
+  // CSS Gradient Generation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Create CSS radial gradient from OKLCH colors
+   */
+  radialGradient(
+    colors: OklchTuple[],
+    x: number = 50,
+    y: number = 50,
+    steps: number = 128
+  ): string {
+    const cacheKey = `radial_${JSON.stringify(colors)}_${x}_${y}_${steps}`;
+    const cached = this.gradientCache.get(cacheKey);
+    if (cached) return cached;
+
+    const spread = this.spreadStrings(colors, steps);
+    const result = `radial-gradient(circle at ${x}% ${y}%, ${spread.join(', ')})`;
+
+    this.gradientCache.set(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * Create CSS radial gradient from GradientConfig
+   */
+  radialGradientFromConfig(config: GradientConfig): string {
+    const [colors, x, y, steps] = config;
+    return this.radialGradient(colors, x, y, steps);
+  }
+
+  /**
+   * Create CSS linear gradient from OKLCH colors
+   */
+  linearGradient(
+    colors: OklchTuple[],
+    angle: number = 0,
+    steps: number = 128
+  ): string {
+    const cacheKey = `linear_${JSON.stringify(colors)}_${angle}_${steps}`;
+    const cached = this.gradientCache.get(cacheKey);
+    if (cached) return cached;
+
+    const spread = this.spreadStrings(colors, steps);
+    const result = `linear-gradient(${angle}deg, ${spread.join(', ')})`;
+
+    this.gradientCache.set(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * Create CSS conic gradient from OKLCH colors
+   */
+  conicGradient(
+    colors: OklchTuple[],
+    fromAngle: number = 0,
+    x: number = 50,
+    y: number = 50,
+    steps: number = 128
+  ): string {
+    const spread = this.spreadStrings(colors, steps);
+    return `conic-gradient(from ${fromAngle}deg at ${x}% ${y}%, ${spread.join(', ')})`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Theme System
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get rendered theme (CSS strings) from config
+   */
+  getTheme(config: ThemeConfig): Theme {
+    const background = this.radialGradientFromConfig(config.backgroundGradient);
+    const buttonBackground = this.radialGradientFromConfig(config.buttonGradient);
+
+    return {
+      color: oklchToString(config.color),
+      accentColor: oklchToString(config.accentColor),
+      background,
+      buttonBackground,
+      boxShadow: config.boxShadow,
+      navBarButtonBackground: oklchToString(config.navBarButtonBackground),
+      buttonStartColor: oklchToString(config.buttonGradient[0][0]!),
+      buttonStopColor: oklchToString(config.buttonGradient[0][3] ?? config.buttonGradient[0][0]!),
+      buttonTextColors: config.buttonTextColors.map(oklchToString),
+      buttonActiveTextColors: config.buttonActiveTextColors.map(oklchToString),
+      navBarButtonTextColors: config.navBarButtonTextColors.map(oklchToString),
+      navBarButtonActiveTextColors: config.navBarButtonActiveTextColors.map(oklchToString),
+      redGradientColors: (config === STANDART_DARK ? RED_GRADIENT_DARK : RED_GRADIENT_LIGHT).map(oklchToString),
+    };
+  }
+
+  /**
+   * Get standard theme by isDark flag
+   */
+  getStandardTheme(isDark: boolean): Theme {
+    return this.getTheme(isDark ? STANDART_DARK : STANDART_LIGHT);
+  }
+
+  /**
+   * Get raw theme config
+   */
+  getThemeConfig(isDark: boolean): ThemeConfig {
+    return isDark ? STANDART_DARK : STANDART_LIGHT;
+  }
+
+  /**
+   * Get precomputed spread colors for theme animation
+   */
+  getThemeSpread(isDark: boolean, steps: number = 128) {
+    const config = this.getThemeConfig(isDark);
+    return {
+      background: this.spread(config.backgroundGradient[0], steps),
+      button: this.spread(config.buttonGradient[0], steps),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Color Conversion (uses chroma for parsing external colors)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Parse any color string to OKLCH tuple
+   */
+  parseToOklch(color: string): OklchTuple {
+    try {
+      const [l, c, h] = chroma(color).oklch();
+      return [l || 0, c || 0, isNaN(h) ? 0 : h];
+    } catch {
+      console.warn(`Failed to parse color: ${color}`);
+      return [0, 0, 0];
+    }
+  }
+
+  /**
+   * Parse array of color strings to OKLCH tuples
+   */
+  parseArrayToOklch(colors: string[]): OklchTuple[] {
+    return colors.map(c => this.parseToOklch(c));
+  }
+
+  /**
+   * Convert OKLCH tuple to hex
+   */
+  toHex(color: OklchTuple): string {
+    return chroma.oklch(...color).hex();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cache Management
+  // ---------------------------------------------------------------------------
+
+  clearCache(): void {
+    this.gradientCache.clear();
+    this.spreadCache.clear();
+  }
+}
+
+// ============================================================================
+// Singleton Export
+// ============================================================================
+
+export const gradient = new GradientUtils();
+
+// ============================================================================
+// Re-exports for convenience
+// ============================================================================
 
 export {
-    gradient,
-    redGradientDark,
-    redGradientLight,
-    STANDART_DARK,
-    STANDART_LIGHT,
-    RAINBOWGRADIENT,
-    RAINBOWGRADIENT2,
-    HEXCOLORSGRADIENT,
-    SPECTRALGRADIENTOKLCH,
+  STANDART_DARK,
+  STANDART_LIGHT,
+  RED_GRADIENT_DARK,
+  RED_GRADIENT_LIGHT,
+  SPECTRAL_GRADIENT,
+  RAINBOW_GRADIENT,
 };

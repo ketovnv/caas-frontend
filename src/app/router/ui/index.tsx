@@ -273,9 +273,9 @@ export const AppRouter = observer(function AppRouter() {
             style={{
               ...style,
               // Only apply drag offset to current page, ADD to existing transform
-              x: isCurrentPage ? style.x.to((v: number) => v + dragOffset.dragX.get()) : style.x,
-              scale: isCurrentPage ? style.scale.to((v: number) => v * dragOffset.dragScale.get()) : style.scale,
-              rotateY: isCurrentPage ? style.rotateY.to((v: number) => v + dragOffset.dragRotateY.get()) : style.rotateY,
+              x: isCurrentPage && style.x ? (style.x as any).to((v: number) => v + dragOffset.dragX.get()) : style.x,
+              scale: isCurrentPage && style.scale ? (style.scale as any).to((v: number) => v * dragOffset.dragScale.get()) : style.scale,
+              rotateY: isCurrentPage && style.rotateY ? (style.rotateY as any).to((v: number) => v + dragOffset.dragRotateY.get()) : style.rotateY,
               position: isCurrentPage ? 'relative' : 'absolute',
               width: '100%',
               transformStyle: 'preserve-3d',

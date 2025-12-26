@@ -12,8 +12,10 @@ export {
 } from './card';
 
 export { FlipCard, type FlipCardProps } from './flip-card';
+export { GlareCard, type GlareCardProps, type GlareCardRef } from './glare-card';
+export { WobbleCard, type WobbleCardProps, type WobbleCardRef } from './wobble-card';
 
-export { AnimatedText, type AnimatedTextProps } from './text'
+export { AnimatedText, GradientText, FlowingGradientText, type AnimatedTextProps } from './text'
 
 // ============================================================================
 // Button Components
@@ -21,6 +23,7 @@ export { AnimatedText, type AnimatedTextProps } from './text'
 export { ShimmerButton, type ShimmerButtonProps } from './shimmer-button';
 export { MagneticButton, type MagneticButtonProps, type MagneticButtonRef } from './button';
 export { RippleButton, type RippleButtonProps } from './button';
+export { RainbowButton, type RainbowButtonProps } from './button';
 
 // ============================================================================
 // Input Components
@@ -61,5 +64,8 @@ export {
   type SkeletonProps,
   type SkeletonRef,
 } from './skeleton';
-// Shared UI components
-// Example: export { Button } from './Button';
+
+// ============================================================================
+// Theme Toggle
+// ============================================================================
+export { ThemeToggle, type ThemeToggleProps } from './theme-toggle';

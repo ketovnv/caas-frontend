@@ -7,7 +7,7 @@ export const FPSMonitor = observer(() => {
         <div
             style={{
                 position: "fixed",
-                top: 10,
+                top: 100,
                 right: 10,
                 zIndex: 9999, // Добавил z-index, чтобы не перекрывалось контентом
                 background: "rgba(0,0,0,0.8)",

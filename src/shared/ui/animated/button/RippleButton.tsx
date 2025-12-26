@@ -3,10 +3,11 @@ import {
   useRef,
   useState,
   useCallback,
+  useEffect,
   type ButtonHTMLAttributes,
   type ReactNode,
 } from 'react';
-import { useSprings, animated, config } from '@react-spring/web';
+import { useTransition, animated } from '@react-spring/web';
 import { cn } from 'shared/lib';
 
 // ============================================================================
@@ -14,25 +15,24 @@ import { cn } from 'shared/lib';
 // ============================================================================
 
 interface Ripple {
-  id: number;
+  key: number;
   x: number;
   y: number;
+  size: number;
 }
 
 export interface RippleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   /** Ripple color */
   rippleColor?: string;
-  /** Max ripple duration ms */
-  rippleDuration?: number;
-  /** Max concurrent ripples */
-  maxRipples?: number;
+  /** Ripple animation duration in ms */
+  duration?: number;
   /** Variant style */
   variant?: 'default' | 'outline' | 'ghost' | 'gradient';
 }
 
 // ============================================================================
-// Component - Imperative useSprings for multiple ripples
+// Component
 // ============================================================================
 
 export const RippleButton = forwardRef<HTMLButtonElement, RippleButtonProps>(
@@ -40,9 +40,8 @@ export const RippleButton = forwardRef<HTMLButtonElement, RippleButtonProps>(
     {
       children,
       className,
-      rippleColor = 'rgba(255, 255, 255, 0.4)',
-      rippleDuration = 600,
-      maxRipples = 5,
+      rippleColor = '#ADD8E6',
+      duration = 600,
       variant = 'default',
       onClick,
       ...props
@@ -51,56 +50,47 @@ export const RippleButton = forwardRef<HTMLButtonElement, RippleButtonProps>(
   ) => {
     const buttonRef = useRef<HTMLButtonElement>(null);
     const [ripples, setRipples] = useState<Ripple[]>([]);
-    const rippleIdRef = useRef(0);
 
-    // 🎯 Imperative springs array for all ripples
-    const [springs, api] = useSprings(
-      maxRipples,
-      () => ({
-        scale: 0,
-        opacity: 0,
-        config: { ...config.gentle, duration: rippleDuration },
-      }),
-      [maxRipples, rippleDuration]
-    );
+    // Animate ripples with useTransition
+    const transitions = useTransition(ripples, {
+      keys: (item) => item.key,
+      from: { scale: 0, opacity: 0.35 },
+      enter: { scale: 2, opacity: 0 },
+      config: { duration },
+      onRest: (_result, _ctrl, item) => {
+        if (item) {
+          setRipples((prev) => prev.filter((r) => r.key !== item.key));
+        }
+      },
+    });
 
     const createRipple = useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (!buttonRef.current) return;
+        const button = buttonRef.current;
+        if (!button) return;
 
-        const rect = buttonRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const rect = button.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
 
-        const id = rippleIdRef.current++;
-        const rippleIndex = id % maxRipples;
+        const newRipple: Ripple = {
+          key: Date.now(),
+          x,
+          y,
+          size,
+        };
 
-        // Add ripple to state
-        setRipples((prev) => {
-          const next = [...prev, { id, x, y }];
-          // Keep only maxRipples
-          return next.slice(-maxRipples);
-        });
-
-        // 🚀 Imperatively trigger ripple animation
-        api.start((index) => {
-          if (index !== rippleIndex) return;
-          
-          return {
-            from: { scale: 0, opacity: 1 },
-            to: async (next) => {
-              await next({ scale: 4, opacity: 0 });
-            },
-            onRest: () => {
-              setRipples((prev) => prev.filter((r) => r.id !== id));
-            },
-          };
-        });
-
+        setRipples((prev) => [...prev, newRipple]);
         onClick?.(e);
       },
-      [maxRipples, api, onClick]
+      [onClick]
     );
+
+    // Cleanup on unmount
+    useEffect(() => {
+      return () => setRipples([]);
+    }, []);
 
     const variantStyles = {
       default: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25',
@@ -117,8 +107,8 @@ export const RippleButton = forwardRef<HTMLButtonElement, RippleButtonProps>(
           else if (ref) ref.current = node;
         }}
         className={cn(
-          'relative inline-flex items-center justify-center',
-          'px-6 py-3 rounded-xl font-medium overflow-hidden',
+          'relative flex cursor-pointer items-center justify-center overflow-hidden',
+          'px-6 py-3 rounded-xl font-medium',
           'transition-all duration-200',
           'active:scale-[0.98]',
           'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -128,35 +118,27 @@ export const RippleButton = forwardRef<HTMLButtonElement, RippleButtonProps>(
         onClick={createRipple}
         {...props}
       >
-        {/* Ripple container */}
-        <span className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
-          {ripples.map((ripple) => {
-            const springIndex = ripple.id % maxRipples;
-            const spring = springs[springIndex];
-            if (!spring) return null;
-
-            return (
-              <animated.span
-                key={ripple.id}
-                className="absolute rounded-full pointer-events-none"
-                style={{
-                  left: ripple.x,
-                  top: ripple.y,
-                  width: 100,
-                  height: 100,
-                  marginLeft: -50,
-                  marginTop: -50,
-                  background: rippleColor,
-                  transform: spring.scale.to((s) => `scale(${s})`),
-                  opacity: spring.opacity,
-                }}
-              />
-            );
-          })}
-        </span>
-
         {/* Content */}
         <span className="relative z-10 flex items-center gap-2">{children}</span>
+
+        {/* Ripple container */}
+        <span className="pointer-events-none absolute inset-0">
+          {transitions((style, item) => (
+            <animated.span
+              key={item.key}
+              className="absolute rounded-full"
+              style={{
+                width: item.size,
+                height: item.size,
+                top: item.y,
+                left: item.x,
+                backgroundColor: rippleColor,
+                transform: style.scale.to((s) => `scale(${s})`),
+                opacity: style.opacity,
+              }}
+            />
+          ))}
+        </span>
       </button>
     );
   }

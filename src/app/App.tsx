@@ -5,7 +5,7 @@ import {} from './router';
 import {web3AuthContextConfig} from 'features/auth';
 import {DefaultErrorFallback, ErrorBoundary} from 'features/error';
 import {router, AppRouter} from 'app/router';
-import {GraniteBackground, MetalBackground,AsphaltBackground} from "shared/ui/animated/background";
+import {AnimatedThemeBackground} from "shared/ui/animated/background";
 import {NavLinks} from "widgets/nav-links";
 import {logger} from "shared/lib";
 
@@ -34,13 +34,13 @@ export function App() {
             }}
         >
             <Web3AuthProvider config={web3AuthContextConfig}>
-                <AsphaltBackground scheme="charcoal" innerShadow fixed>
+                <AnimatedThemeBackground fixed noise vignette>
                     <NavLinks/>
                     <AuthSync/>
                     <main className="flex flex-col items-center min-h-screen px-4 py-16 gap-4">
                         <AppRouter/>
                     </main>
-                </AsphaltBackground>
+                </AnimatedThemeBackground>
             </Web3AuthProvider>
         </ErrorBoundary>
     );

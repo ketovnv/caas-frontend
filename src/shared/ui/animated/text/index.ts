@@ -1,1 +1,1 @@
-export { AnimatedText, type AnimatedTextProps } from './AnimatedText';
+export { AnimatedText, GradientText, FlowingGradientText, type AnimatedTextProps } from './AnimatedText';

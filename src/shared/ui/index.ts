@@ -8,7 +8,15 @@ export {
     type CardProps,
     FlipCard,
     type FlipCardProps,
+    GlareCard,
+    type GlareCardProps,
+    type GlareCardRef,
+    WobbleCard,
+    type WobbleCardProps,
+    type WobbleCardRef,
     AnimatedText,
+    GradientText,
+    FlowingGradientText,
     type AnimatedTextProps,
     ShimmerButton,
     type ShimmerButtonProps,
@@ -17,6 +25,8 @@ export {
     type MagneticButtonRef,
     RippleButton,
     type RippleButtonProps,
+    RainbowButton,
+    type RainbowButtonProps,
     AnimatedInput,
     type AnimatedInputProps,
     SpotlightInput,
@@ -36,7 +46,9 @@ export {
     SkeletonCard,
     SkeletonAvatar,
     type SkeletonProps,
-    type SkeletonRef
+    type SkeletonRef,
+    ThemeToggle,
+    type ThemeToggleProps
 } from './animated';
 
 export {

@@ -7,15 +7,17 @@ import {
   CardDescription,
   CardContent,
   FlipCard,
+  GlareCard,
+  WobbleCard,
   // Buttons
   ShimmerButton,
   MagneticButton,
   RippleButton,
+  RainbowButton,
   // Inputs
   SpotlightInput,
   VanishInput,
-  // Background
-
+  // Counter
   AnimatedCounter,
   // List
   AnimatedList,
@@ -24,6 +26,8 @@ import {
   // Skeleton
   Skeleton,
   SkeletonCard,
+  // Theme
+  ThemeToggle,
   // Types
   type AnimatedCounterRef,
   type AnimatedListRef,
@@ -108,9 +112,10 @@ export function ComponentsShowcase() {
         {/* ================================================================ */}
         {/* Cards Section */}
         {/* ================================================================ */}
-        <section className="space-y-4">
+        <section className="space-y-6">
           <h2 className="text-2xl font-semibold text-white">Cards</h2>
-          
+
+          {/* Row 1: Basic cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* 3D Tilt Card */}
             <Card
@@ -156,15 +161,109 @@ export function ComponentsShowcase() {
             {/* Flip Card */}
             <FlipCard
               rotate="y"
-              className="h-72"
+              trigger="click"
+              back={
+                <div className="flex flex-col items-center justify-center h-full">
+                  <span className="text-4xl mb-2">✨</span>
+                  <h3 className="text-lg font-bold text-white">Card Details</h3>
+                  <p className="text-zinc-400 text-sm mt-2">Click again to flip back</p>
+                </div>
+              }
             >
-              {/* Front */}
-              <div className="flex flex-col items-center justify-center h-full bg-linear-to-br from-blue-600 to-purple-600 p-6">
+              <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-blue-600 to-purple-600 p-6">
                 <span className="text-4xl mb-2">💳</span>
-                <h3 className="text-xl font-bold text-white">Flip Me!</h3>
+                <h3 className="text-xl font-bold text-white">Click to Flip!</h3>
               </div>
-              {/* Back is default */}
             </FlipCard>
+          </div>
+
+          {/* Row 2: Advanced cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Glare Card */}
+            <GlareCard className="p-6 h-64">
+              <div className="flex flex-col justify-between h-full">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Glare Card</h3>
+                  <p className="text-zinc-400 text-sm">
+                    Linear-style glare effect that follows your cursor
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500" />
+                  <span className="text-zinc-300 text-sm">Hover me!</span>
+                </div>
+              </div>
+            </GlareCard>
+
+            {/* Glare Card with custom colors */}
+            <GlareCard
+              className="p-6 h-64"
+              borderColors={['#f59e0b', '#ef4444', '#ec4899']}
+              glareColor="rgba(251, 191, 36, 0.3)"
+            >
+              <div className="flex flex-col justify-between h-full">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Custom Glare</h3>
+                  <p className="text-zinc-400 text-sm">
+                    With custom border and glare colors
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs">
+                    amber
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-xs">
+                    red
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-pink-500/20 text-pink-400 text-xs">
+                    pink
+                  </span>
+                </div>
+              </div>
+            </GlareCard>
+
+            {/* Wobble Card */}
+            <WobbleCard variant="gradient" className="p-6 h-64">
+              <div className="flex flex-col justify-between h-full">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Wobble Card</h3>
+                  <p className="text-white/70 text-sm">
+                    Follows cursor with a soft wobble effect
+                  </p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl">🎯</span>
+                  <span className="text-white/50 text-xs">Move cursor around</span>
+                </div>
+              </div>
+            </WobbleCard>
+          </div>
+
+          {/* Row 3: More wobble variants */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <WobbleCard variant="pink" className="p-8">
+              <div className="flex items-center gap-6">
+                <span className="text-5xl">🎨</span>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-1">Pink Wobble</h3>
+                  <p className="text-white/70 text-sm">
+                    Perfect for creative and playful sections
+                  </p>
+                </div>
+              </div>
+            </WobbleCard>
+
+            <WobbleCard variant="blue" className="p-8">
+              <div className="flex items-center gap-6">
+                <span className="text-5xl">🚀</span>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-1">Blue Wobble</h3>
+                  <p className="text-white/70 text-sm">
+                    Great for technology and professional content
+                  </p>
+                </div>
+              </div>
+            </WobbleCard>
           </div>
         </section>
 
@@ -176,8 +275,12 @@ export function ComponentsShowcase() {
 
           <div className="flex flex-wrap gap-4 items-center">
             <ShimmerButton
-              shimmerColor="#3b82f6"
-              shimmerSpeed={1.5}
+              shimmerColor="#ffffff"
+              shimmerDuration={2.5}
+              shimmerSpread={90}
+              shimmerSize="0.15em"
+              shimmerBlur={10}
+              background="rgba(0, 0, 0, 0.95)"
             >
               Shimmer Button
             </ShimmerButton>
@@ -198,6 +301,10 @@ export function ComponentsShowcase() {
             <RippleButton variant="outline">
               Outline Ripple
             </RippleButton>
+
+            <RainbowButton>
+              Rainbow Button
+            </RainbowButton>
           </div>
         </section>
 
@@ -370,6 +477,32 @@ export function ComponentsShowcase() {
               </div>
             </div>
           )}
+        </section>
+
+        {/* ================================================================ */}
+        {/* Theme Toggle Section */}
+        {/* ================================================================ */}
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-white">Theme Toggle</h2>
+
+          <div className="flex items-center gap-8">
+            <div className="flex flex-col items-center gap-2">
+              <ThemeToggle size="sm" />
+              <span className="text-zinc-400 text-sm">Small</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <ThemeToggle size="md" />
+              <span className="text-zinc-400 text-sm">Medium</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <ThemeToggle size="lg" />
+              <span className="text-zinc-400 text-sm">Large</span>
+            </div>
+          </div>
+
+          <p className="text-zinc-500 text-sm">
+            Click to toggle between light and dark themes. The background gradient animates smoothly.
+          </p>
         </section>
 
         {/* Footer */}

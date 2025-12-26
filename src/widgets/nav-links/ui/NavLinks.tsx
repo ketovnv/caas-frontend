@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { router, type Route } from 'app/router';
-import {FPSMonitor} from "shared/ui";
+import { FPSMonitor, ThemeToggle } from 'shared/ui';
 
 
 interface NavLink {
@@ -39,6 +39,7 @@ export const NavLinks = observer(function NavLinks() {
           {label}
         </button>
       ))}
+      <ThemeToggle size="md" className="ml-auto" />
       <FPSMonitor/>
     </nav>
   );

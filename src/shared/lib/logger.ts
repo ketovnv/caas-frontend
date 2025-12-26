@@ -74,14 +74,14 @@ const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
 	const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
 	return result
 		? {
-				r: parseInt(result[1], 16),
-				g: parseInt(result[2], 16),
-				b: parseInt(result[3], 16),
+				r: parseInt(result[1] ?? 'ff', 16),
+				g: parseInt(result[2] ?? 'ff', 16),
+				b: parseInt(result[3] ?? 'ff', 16),
 			}
 		: { r: 255, g: 255, b: 255 };
 };
 
-const _lerpColor = (color1: string, color2: string, t: number): string => {
+const lerpColor = (color1: string, color2: string, t: number): string => {
 	const c1 = hexToRgb(color1);
 	const c2 = hexToRgb(color2);
 
@@ -901,6 +901,7 @@ class Logger {
 // 📤 Export
 // ============================================
 export const logger = new Logger();
+export { lerpColor, hexToRgb };
 
 // Convenience exports
 export const {

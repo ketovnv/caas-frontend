@@ -67,6 +67,9 @@ export function createControllerAPI<T extends Record<string, number | string>>(
     };
 }
 
+// Alias for convenience
+export const createController = createControllerAPI;
+
 export {
     // Core hooks
     useSpring,
