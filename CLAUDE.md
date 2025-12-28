@@ -101,6 +101,49 @@ React Spring re-exports available in `shared/lib/animated.ts` with aliases: `ani
 - Color system: OKLCH format for theme colors
 - Russian UI text for error messages
 
+## Animation Architecture (Imperative Controllers)
+
+**Главный принцип:** Вместо армии React хуков — элегантные классы-контроллеры.
+
+### Паттерн Controller
+
+```typescript
+// ❌ ПЛОХО: Много хуков, сложно читать
+const [spring1, api1] = useSpring(() => ({...}));
+const [spring2, api2] = useSpring(() => ({...}));
+const [spring3, api3] = useSpring(() => ({...}));
+// ... и так 7 раз
+
+// ✅ ХОРОШО: Один контроллер с чистым API
+class ToggleController {
+  private ctrl: Controller<State>;
+
+  get thumbTransform() { return this.ctrl.springs.x.to(...); }
+  get background() { return this.ctrl.springs.bg; }
+
+  animateTo(isDark: boolean) { this.ctrl.start({...}); }
+}
+
+// Использование в компоненте:
+const ctrl = new ToggleController(translate);
+<animated.div style={{ transform: ctrl.thumbTransform }} />
+```
+
+### Примеры контроллеров
+
+- `ColorSpring` — один OKLCH цвет с анимацией
+- `GradientSpring` — 4-цветный градиент (radial/linear/conic)
+- `DynamicColorArraySpring` — массив произвольного числа цветов
+- `ToggleController` — все анимации переключателя темы
+
+### Принципы
+
+1. **Состояния в константах** — `LIGHT_STATE`, `DARK_STATE` вне компонента
+2. **Геттеры для значений** — `get thumbTransform()`, `get sunStyle()`
+3. **Методы для анимаций** — `toLight()`, `toDark()`, `animateTo()`
+4. **Один Controller** — вместо множества `useSpring`
+5. **themeStore.springConfig** — единый конфиг для синхронизации
+
 ## Reference Examples (gitignored)
 
 Папка `examples/` содержит справочные материалы (не входит в сборку):

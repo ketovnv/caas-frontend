@@ -122,7 +122,7 @@ export const ThemeToggle = observer(function ThemeToggle({
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-0.5 h-3 bg-gradient-to-t from-yellow-400/80 to-transparent rounded-full"
+            className="absolute w-0.5 h-3 bg-linear-to-t from-yellow-400/80 to-transparent rounded-full"
             style={{
               transform: `rotate(${i * 45}deg) translateY(-140%)`,
               transformOrigin: 'center center',
