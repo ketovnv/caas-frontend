@@ -16,11 +16,7 @@ export type SpringResult = Promise<void>;
 /** Convert any promise to Promise<void> */
 const asVoid = <T>(p: Promise<T>): SpringResult => p.then(() => {});
 
-
-
-
 // Utils
-
 
 const normalizeHue = (h: number) => ((h % 360) + 360) % 360;
 
@@ -33,9 +29,7 @@ const shortestHuePath = (from: number, to: number): number => {
 
 export const DEFAULT_SPRING_CONFIG: SpringConfig = { tension: 120, friction: 14 };
 
-
 // ColorSpring — один OKLCH цвет
-
 
 export class ColorSpring {
   private ctrl: Controller<{ l: number; c: number; h: number }>;
@@ -81,9 +75,7 @@ export class ColorSpring {
   }
 }
 
-
 // GradientSpring — 4 OKLCH цвета → radial/linear/conic gradient
-
 
 type GradientType = 'radial' | 'linear' | 'conic';
 

@@ -1,5 +1,7 @@
 import { type ReactNode } from 'react';
+import { animated } from '@react-spring/web';
 import { cn } from 'shared/lib';
+import {themeStore} from "@/shared";
 
 // ============================================================================
 // Types
@@ -74,7 +76,7 @@ export function AsphaltBackground({
           'absolute inset-0',
           variant === 'dark'
             ? 'bg-gradient-to-br from-gray-950 via-gray-800 to-gray-950'
-            : 'bg-gradient-to-br from-slate-700 via-slate-600 to-slate-700'
+            : 'bg-gradient-to-br from-slate-100 via-slate-300 to-slate-100'
         )}
       />
 
@@ -98,11 +100,9 @@ export function AsphaltBackground({
       />
 
       {/* Vignette */}
-      <div
+      <animated.div
         className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.2) 100%)',
-        }}
+        style={{...themeStore.backgroundStyle, opacity: .25}}
       />
 
       {/* Content */}

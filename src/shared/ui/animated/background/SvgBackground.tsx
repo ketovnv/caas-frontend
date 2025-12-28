@@ -198,7 +198,7 @@ export const TexturedBackground = memo(function TexturedBackground({
 type PresetProps = Omit<TexturedBackgroundProps, 'texture'>;
 
 /** Тёмный асфальт — как в оригинале */
-export const AsphaltBackground = memo(function AsphaltBackground({
+export const SvgAsphaltBackground = memo(function AsphaltBackground({
                                                                      children,
                                                                      className,
                                                                      scheme,

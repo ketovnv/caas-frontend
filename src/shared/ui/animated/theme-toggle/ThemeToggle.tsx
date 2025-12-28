@@ -1,6 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { animated, useSpring, config } from '@react-spring/web';
+import { animated, useSpring } from '@react-spring/web';
 import { themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
 
@@ -29,83 +29,107 @@ const sizeConfig = {
 // Component
 // ============================================================================
 
+// ============================================================================
+// Animation States
+// ============================================================================
+
+const LIGHT_STATE = {
+  thumb: { x: 1, rotate: 360 }, // x=1 means right side (x * translate)
+  bg: { background: 'linear-gradient(145deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%)' },
+  glow: { boxShadow: '0 0 20px rgba(251, 191, 36, 0.5), inset 0 1px 2px rgba(255,255,255,0.3)' },
+  sun: { opacity: 1, scale: 1, rotate: 0, filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.8))' },
+  moon: { opacity: 0, scale: 0.3, rotate: 180, filter: 'drop-shadow(0 0 0px rgba(148, 163, 184, 0))' },
+  stars: { opacity: 0, scale: 0 },
+  rays: { opacity: 0.8, scale: 1, rotate: 45 },
+};
+
+const DARK_STATE = {
+  thumb: { x: 0, rotate: 0 }, // x=0 means left side
+  bg: { background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #334155 100%)' },
+  glow: { boxShadow: '0 0 15px rgba(100, 116, 139, 0.3), inset 0 1px 2px rgba(0,0,0,0.3)' },
+  sun: { opacity: 0, scale: 0.3, rotate: -180, filter: 'drop-shadow(0 0 0px rgba(251, 191, 36, 0))' },
+  moon: { opacity: 1, scale: 1, rotate: 0, filter: 'drop-shadow(0 0 3px rgba(148, 163, 184, 0.5))' },
+  stars: { opacity: 1, scale: 1 },
+  rays: { opacity: 0, scale: 0.5, rotate: 0 },
+};
+
 export const ThemeToggle = observer(function ThemeToggle({
   className,
   size = 'md',
 }: ThemeToggleProps) {
   const { wrapper, icon, thumb, translate } = sizeConfig[size];
-  const isDark = themeStore.themeIsDark;
   const lastClickRef = useRef(0);
 
-  // Thumb position animation
-  const thumbSpring = useSpring({
-    x: isDark ? 0 : translate,
-    rotate: isDark ? 0 : 360,
-    config: { tension: 300, friction: 20, mass: 1 },
-  });
+  // Initial state
+  const isDark = themeStore.themeIsDark;
+  const initial = isDark ? DARK_STATE : LIGHT_STATE;
 
-  // Background gradient animation
-  const bgSpring = useSpring({
-    background: isDark
-      ? 'linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
-      : 'linear-gradient(145deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%)',
-    config: { tension: 200, friction: 25 },
-  });
+  // ─────────────────────────────────────────────────────────────────────────
+  // Imperative Springs
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Glow effect with sequence animation
-  const [glowSpring, glowApi] = useSpring(() => ({
-    boxShadow: isDark
-      ? '0 0 15px rgba(100, 116, 139, 0.3), inset 0 1px 2px rgba(0,0,0,0.3)'
-      : '0 0 20px rgba(251, 191, 36, 0.5), inset 0 1px 2px rgba(255,255,255,0.3)',
-    config: { tension: 200, friction: 25 },
-    onRest: async (_result, ctrl) => {
-      if (!isDark) {
-        // Sun glow pulse sequence
-        await ctrl.start({ boxShadow: '0 0 30px rgba(251, 191, 36, 0.8), inset 0 1px 2px rgba(255,255,255,0.3)' });
-        await new Promise(r => setTimeout(r, 200));
-        await ctrl.start({ boxShadow: '0 0 15px rgba(251, 191, 36, 0.4), inset 0 1px 2px rgba(255,255,255,0.3)' });
-        await new Promise(r => setTimeout(r, 300));
-        await ctrl.start({ boxShadow: '0 0 25px rgba(251, 191, 36, 0.6), inset 0 1px 2px rgba(255,255,255,0.3)' });
-      }
-    },
+  const [thumbSpring, thumbApi] = useSpring(() => ({
+    x: initial.thumb.x * translate,
+    rotate: initial.thumb.rotate,
+    config: themeStore.springConfig,
   }));
 
-  // Sun icon animation
-  const sunSpring = useSpring({
-    opacity: isDark ? 0 : 1,
-    scale: isDark ? 0.3 : 1,
-    rotate: isDark ? -180 : 0,
-    filter: isDark
-      ? 'drop-shadow(0 0 0px rgba(251, 191, 36, 0))'
-      : 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.8))',
-    config: { ...config.wobbly, tension: 280, friction: 20 },
-  });
+  const [bgSpring, bgApi] = useSpring(() => ({
+    ...initial.bg,
+    config: themeStore.springConfig,
+  }));
 
-  // Moon icon animation
-  const moonSpring = useSpring({
-    opacity: isDark ? 1 : 0,
-    scale: isDark ? 1 : 0.3,
-    rotate: isDark ? 0 : 180,
-    filter: isDark
-      ? 'drop-shadow(0 0 3px rgba(148, 163, 184, 0.5))'
-      : 'drop-shadow(0 0 0px rgba(148, 163, 184, 0))',
-    config: { ...config.wobbly, tension: 280, friction: 20 },
-  });
+  const [glowSpring, glowApi] = useSpring(() => ({
+    ...initial.glow,
+    config: themeStore.springConfig,
+  }));
 
-  // Stars animation (for dark mode)
-  const starsSpring = useSpring({
-    opacity: isDark ? 1 : 0,
-    scale: isDark ? 1 : 0,
-    config: { tension: 200, friction: 30 },
-  });
+  const [sunSpring, sunApi] = useSpring(() => ({
+    ...initial.sun,
+    config: themeStore.springConfig,
+  }));
 
-  // Rays animation (for light mode)
-  const raysSpring = useSpring({
-    opacity: isDark ? 0 : 0.8,
-    scale: isDark ? 0.5 : 1,
-    rotate: isDark ? 0 : 45,
-    config: { tension: 150, friction: 20 },
-  });
+  const [moonSpring, moonApi] = useSpring(() => ({
+    ...initial.moon,
+    config: themeStore.springConfig,
+  }));
+
+  const [starsSpring, starsApi] = useSpring(() => ({
+    ...initial.stars,
+    config: themeStore.springConfig,
+  }));
+
+  const [raysSpring, raysApi] = useSpring(() => ({
+    ...initial.rays,
+    config: themeStore.springConfig,
+  }));
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Animate on theme change (via observer re-render)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const prevIsDarkRef = useRef(isDark);
+
+  useEffect(() => {
+    // Skip initial render
+    if (prevIsDarkRef.current === isDark) return;
+    prevIsDarkRef.current = isDark;
+
+    const state = isDark ? DARK_STATE : LIGHT_STATE;
+    const cfg = { config: themeStore.springConfig };
+
+    thumbApi.start({ x: state.thumb.x * translate, rotate: state.thumb.rotate, ...cfg });
+    bgApi.start({ ...state.bg, ...cfg });
+    glowApi.start({ ...state.glow, ...cfg });
+    sunApi.start({ ...state.sun, ...cfg });
+    moonApi.start({ ...state.moon, ...cfg });
+    starsApi.start({ ...state.stars, ...cfg });
+    raysApi.start({ ...state.rays, ...cfg });
+  }, [isDark, translate, thumbApi, bgApi, glowApi, sunApi, moonApi, starsApi, raysApi]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Click Handler
+  // ─────────────────────────────────────────────────────────────────────────
 
   const handleClick = () => {
     const now = Date.now();
@@ -113,12 +137,6 @@ export const ThemeToggle = observer(function ThemeToggle({
     lastClickRef.current = now;
 
     themeStore.toggleColorScheme();
-    // Trigger glow animation
-    glowApi.start({
-      boxShadow: !isDark
-        ? '0 0 15px rgba(100, 116, 139, 0.3), inset 0 1px 2px rgba(0,0,0,0.3)'
-        : '0 0 20px rgba(251, 191, 36, 0.5), inset 0 1px 2px rgba(255,255,255,0.3)',
-    });
   };
 
   return (
@@ -133,7 +151,7 @@ export const ThemeToggle = observer(function ThemeToggle({
         className
       )}
       style={{ ...bgSpring, ...glowSpring }}
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={themeStore.themeIsDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {/* Stars background (dark mode) */}
       <animated.div

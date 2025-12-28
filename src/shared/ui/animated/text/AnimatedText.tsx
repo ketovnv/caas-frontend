@@ -19,6 +19,7 @@ import { cn } from 'shared/lib';
 import {
   RAINBOWGRADIENT,
   type OklchTuple,
+  type SpringConfig,
   DynamicColorArraySpring,
   themeStore,
 } from '@/shared';
@@ -54,6 +55,8 @@ export interface AnimatedTextProps {
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span' | 'div';
   /** Callback when animation completes */
   onAnimationComplete?: () => void;
+  /** Spring config for color animations (defaults to themeStore.springConfig) */
+  colorSpringConfig?: SpringConfig;
 }
 
 export interface AnimatedTextRef {
@@ -132,6 +135,7 @@ function AnimatedTextInner(
     className,
     as: Tag = 'div',
     onAnimationComplete,
+    colorSpringConfig,
   }: AnimatedTextProps,
   ref: React.ForwardedRef<AnimatedTextRef>
 ) {
@@ -164,9 +168,12 @@ function AnimatedTextInner(
 
   const colorSpringRef = useRef<DynamicColorArraySpring | null>(null);
 
-  // Initialize color spring once
+  // Initialize color spring once (uses theme's spring config by default)
   if (!colorSpringRef.current) {
-    colorSpringRef.current = new DynamicColorArraySpring(initialColors);
+    colorSpringRef.current = new DynamicColorArraySpring(
+      initialColors,
+      colorSpringConfig ?? themeStore.springConfig
+    );
   }
 
   const colorSpring = colorSpringRef.current;
@@ -334,25 +341,27 @@ function AnimatedTextInner(
         return (
           <animated.span
             key={index}
-            style={{
-              display: 'inline-block',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              color: 'transparent',
-              // Double width for seamless animation loop
-              backgroundSize: `${chars.length * 200}% 100%`,
-              backgroundPosition: gradientSpeed > 0 ? undefined : `${charPosition}% 0%`,
-              backgroundImage: getAnimatedBackground(),
-              // CSS custom properties for animation keyframes
-              '--start-pos': startPos,
-              '--end-pos': endPos,
-              animation: gradientSpeed > 0 ? `gradientFlow ${gradientSpeed}s linear infinite` : undefined,
-              opacity: style.opacity,
-              transform: style.y.to((y) => `translateY(${y}px)`),
-              scale: style.scale,
-              filter: style.blur.to((b) => `blur(${b}px)`),
-            } as React.CSSProperties}
+            style={
+              {
+                display: 'inline-block',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                color: 'transparent',
+                // Double width for seamless animation loop
+                backgroundSize: `${chars.length * 200}% 100%`,
+                backgroundPosition: gradientSpeed > 0 ? undefined : `${charPosition}% 0%`,
+                backgroundImage: getAnimatedBackground(),
+                // CSS custom properties for animation keyframes
+                '--start-pos': startPos,
+                '--end-pos': endPos,
+                animation: gradientSpeed > 0 ? `gradientFlow ${gradientSpeed}s linear infinite` : undefined,
+                opacity: style.opacity,
+                transform: style.y.to((y) => `translateY(${y}px)`),
+                scale: style.scale,
+                filter: style.blur.to((b) => `blur(${b}px)`),
+              } as unknown as React.CSSProperties
+            }
           >
             {chars[index] === ' ' ? '\u00A0' : chars[index]}
           </animated.span>
