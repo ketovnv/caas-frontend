@@ -1,336 +1,369 @@
-// stores/ThemeStore.ts
-import { action, makeAutoObservable, reaction } from 'mobx';
+import { makeAutoObservable, reaction } from 'mobx';
 import {
-  gradient,
-  createController,
-  type ControllerAPI,
-  type OklchTuple,
-  lerpOklchArrays,
-  oklchToString,
-} from 'shared/lib';
+  ColorSpring,
+  GradientSpring,
+  ColorArraySpring,
+  MultiStopGradientSpring,
+  DEFAULT_SPRING_CONFIG,
+  type SpringConfig,
+} from 'shared/lib/gradient.ts';
 
-const DARK = 0;
-const LIGHT = 1;
+import {
+  type ThemeConfig,
+  type GradientConfig,
+  STANDART_DARK,
+  STANDART_LIGHT,
+  SPECTRAL_GRADIENT,
+  RAINBOWGRADIENT,
+  RED_GRADIENT_DARK,
+  RED_GRADIENT_LIGHT,
+} from 'shared/config';
 
-const ultraSpringTheme = {
-    tension: 50,
-    friction: 175,
-    mass: 15,
-    precision: 0.1,
+// ============================================================================
+// Types
+// ============================================================================
+
+export type ColorScheme = 'light' | 'dark';
+
+const THEMES: Record<ColorScheme, ThemeConfig> = {
+  light: STANDART_LIGHT,
+  dark: STANDART_DARK,
 };
 
-// ThemeToggle animation configs
-const toggleAnimationConfig = {
-  path: { tension: 280, friction: 60, mass: 0.8 },
-  switch: { tension: 300, friction: 30 },
-  background: { tension: 200, friction: 25 },
-  glow: { tension: 200, friction: 25 },
+/** Get system preferred color scheme */
+const getSystemColorScheme = (): ColorScheme => {
+  if (typeof window === 'undefined') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
+
+// ============================================================================
+// Theme Store
+// ============================================================================
 
 export class ThemeStore {
-  colorScheme = DARK;
-  disposers: Array<() => void> = [];
-  isDisposed = false;
+  // Observable state
+  colorScheme: ColorScheme = 'light';
+  boxShadow: string = STANDART_LIGHT.boxShadow;
 
-  // Main theme progress controller (0 = dark, 1 = light)
-  progressController: ControllerAPI | null = null;
+  // ─────────────────────────────────────────────────────────────────────────
+  // Theme Springs
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Precomputed spread colors for animation (128 colors each)
-  darkBackgroundSpread: OklchTuple[] = [];
-  lightBackgroundSpread: OklchTuple[] = [];
-  darkButtonSpread: OklchTuple[] = [];
-  lightButtonSpread: OklchTuple[] = [];
+  // Градиенты
+  readonly backgroundGradient: GradientSpring;
+  readonly buttonGradient: GradientSpring;
 
-  // Precomputed single colors
-  darkColor: OklchTuple = [0, 0, 0];
-  lightColor: OklchTuple = [0, 0, 0];
-  darkAccent: OklchTuple = [0, 0, 0];
-  lightAccent: OklchTuple = [0, 0, 0];
+  // Одиночные цвета
+  readonly color: ColorSpring;
+  readonly accentColor: ColorSpring;
+  readonly goldColor: ColorSpring;
+  readonly navBarButtonBackground: ColorSpring;
 
-  // ThemeToggle controllers
-  pathController: ControllerAPI | null = null;
-  switchController: ControllerAPI | null = null;
-  backgroundController: ControllerAPI | null = null;
-  glowController: ControllerAPI | null = null;
+  // Массивы цветов (4 шт каждый)
+  readonly buttonTextColors: ColorArraySpring;
+  readonly buttonActiveTextColors: ColorArraySpring;
+  readonly navBarButtonTextColors: ColorArraySpring;
+  readonly navBarButtonActiveTextColors: ColorArraySpring;
 
-  constructor(initialState?: { colorScheme?: number }) {
-    makeAutoObservable(this, {
-      toggleColorScheme: action,
-      animateThemeTransition: action,
-      updateToggleAnimations: action,
+  // ─────────────────────────────────────────────────────────────────────────
+  // Rainbow/Spectral градиенты
+  // ─────────────────────────────────────────────────────────────────────────
+
+  readonly spectralGradient: MultiStopGradientSpring;
+  readonly rainbowGradient: MultiStopGradientSpring;
+  readonly redGradient: GradientSpring;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Internal
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private disposers: (() => void)[] = [];
+  readonly springConfig: SpringConfig;
+
+
+  get colorStyle() {
+    return { color: this.color.value };
+  }
+
+  get accentStyle() {
+    return { color: this.accentColor.value };
+  }
+
+  get goldStyle() {
+    return { color: this.goldColor.value };
+  }
+
+  get backgroundStyle() {
+    return { background: this.backgroundGradient.value };
+  }
+
+// // Фон страницы (radial gradient)
+//   get pageBackgroundStyle() {
+//     return { backgroundImage: this.backgroundGradient.value };
+//   }
+//
+// // Градиент для кнопок, карточек и т.д.
+//   get buttonGradientStyle() {
+//     return { backgroundImage: this.buttonGradient.value };
+//   }
+//
+// // Навбар кнопка фон
+//   get navBarButtonBgStyle() {
+//     return { backgroundColor: this.navBarButtonBackground.value };
+//   }
+//
+// // Стиль для обычной кнопки (градиент + текст из массива)
+//   get buttonStyle() {
+//     return {
+//       backgroundImage: this.buttonGradient.value,
+//       color: this.buttonTextColors.get(0), // первый цвет из массива 4
+//       // можно добавить другие, если нужно
+//     };
+//   }
+
+  constructor(
+    initialScheme: ColorScheme = 'light',
+    springConfig: SpringConfig = DEFAULT_SPRING_CONFIG
+  ) {
+    this.springConfig = springConfig;
+    const theme = THEMES[initialScheme];
+
+    // Градиенты: GradientConfig = [colors[], x, y, steps]
+    this.backgroundGradient = this.createGradientSpring(theme.backgroundGradient);
+    this.buttonGradient = this.createGradientSpring(theme.buttonGradient);
+
+    // Одиночные
+    this.color = new ColorSpring(theme.color, this.springConfig);
+    this.accentColor = new ColorSpring(theme.accentColor, this.springConfig);
+    this.goldColor = new ColorSpring(theme.goldColor, this.springConfig);
+    this.navBarButtonBackground = new ColorSpring(theme.navBarButtonBackground, this.springConfig);
+
+    // Массивы
+    this.buttonTextColors = new ColorArraySpring(theme.buttonTextColors, this.springConfig);
+    this.buttonActiveTextColors = new ColorArraySpring(theme.buttonActiveTextColors, this.springConfig);
+    this.navBarButtonTextColors = new ColorArraySpring(theme.navBarButtonTextColors, this.springConfig);
+    this.navBarButtonActiveTextColors = new ColorArraySpring(theme.navBarButtonActiveTextColors, this.springConfig);
+
+    // Rainbow/Spectral
+    this.spectralGradient = new MultiStopGradientSpring(
+        SPECTRAL_GRADIENT,
+        { type: 'linear', angle: 90 },
+        this.springConfig
+    );
+    this.rainbowGradient = new MultiStopGradientSpring(
+        RAINBOWGRADIENT,
+        { type: 'linear', angle: 90 },
+        this.springConfig
+    );
+    this.redGradient = new GradientSpring(
+        initialScheme === 'dark' ? RED_GRADIENT_DARK : RED_GRADIENT_LIGHT,
+        { type: 'linear', angle: 45 },
+        this.springConfig
+    );
+
+    this.colorScheme = initialScheme;
+    this.boxShadow = theme.boxShadow;
+
+    makeAutoObservable<ThemeStore, 'disposers'>(this, {
+      // Spring instances - not observable
+      backgroundGradient: false,
+      buttonGradient: false,
+      color: false,
+      accentColor: false,
+      goldColor: false,
+      navBarButtonBackground: false,
+      buttonTextColors: false,
+      buttonActiveTextColors: false,
+      navBarButtonTextColors: false,
+      navBarButtonActiveTextColors: false,
+      spectralGradient: false,
+      rainbowGradient: false,
+      redGradient: false,
+      springConfig: false,
+      // Private fields
+      disposers: false,
     });
 
-    this.colorScheme = initialState?.colorScheme ?? DARK;
-
-    // Precompute spread colors at initialization
-    this.precomputeSpreads();
-    this.precomputeColors();
-
-    this.setProgressController();
-    this.setToggleControllers();
     this.setupReactions();
   }
 
-  /**
-   * Precompute 128-color spreads for both themes.
-   * Called ONCE at startup - no chroma calls during animation.
-   */
-  precomputeSpreads = () => {
-    const darkSpread = gradient.getThemeSpread(true, 128);
-    const lightSpread = gradient.getThemeSpread(false, 128);
+  // ─────────────────────────────────────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────────────────────────────────────
 
-    this.darkBackgroundSpread = darkSpread.background;
-    this.lightBackgroundSpread = lightSpread.background;
-    this.darkButtonSpread = darkSpread.button;
-    this.lightButtonSpread = lightSpread.button;
-
-    console.log('🎨 Precomputed 128-color spreads for theme animation');
-  };
-
-  /**
-   * Precompute single colors for text/accent animation
-   */
-  precomputeColors = () => {
-    const darkConfig = gradient.getThemeConfig(true);
-    const lightConfig = gradient.getThemeConfig(false);
-
-    this.darkColor = darkConfig.color;
-    this.lightColor = lightConfig.color;
-    this.darkAccent = darkConfig.accentColor;
-    this.lightAccent = lightConfig.accentColor;
-  };
-
-  // ============================================================================
-  // Theme Progress (main animation driver)
-  // ============================================================================
-
-  /**
-   * Get springs for use in animated components.
-   * Usage: <animated.div style={{ background: springs.progress.to(t => store.getBackgroundAtProgress(t)) }}>
-   */
-  get springs() {
-    return this.progressController?.springs ?? { progress: this.themeIsDark ? 0 : 1 };
+  private createGradientSpring(cfg: GradientConfig): GradientSpring {
+    const [colors, x, y] = cfg;
+    return new GradientSpring(colors, { type: 'radial', x, y }, this.springConfig);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Reactions
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private setupReactions() {
+    const dispose = reaction(
+        () => this.colorScheme,
+        () => this.switchTheme(),
+        { fireImmediately: false },
+    );
+    this.disposers.push(dispose);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Theme Switch
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private switchTheme() {
+    const theme = THEMES[this.colorScheme];
+    const [bgColors, bgX, bgY] = theme.backgroundGradient;
+    const [btnColors, btnX, btnY] = theme.buttonGradient;
+
+    // Обновляем позиции
+    this.backgroundGradient.setPosition(bgX, bgY);
+    this.buttonGradient.setPosition(btnX, btnY);
+
+    // Анимируем всё параллельно
+    this.backgroundGradient.animateTo(bgColors);
+    this.buttonGradient.animateTo(btnColors);
+
+    this.color.animateTo(theme.color);
+    this.accentColor.animateTo(theme.accentColor);
+    this.goldColor.animateTo(theme.goldColor);
+    this.navBarButtonBackground.animateTo(theme.navBarButtonBackground);
+
+    this.buttonTextColors.animateTo(theme.buttonTextColors);
+    this.buttonActiveTextColors.animateTo(theme.buttonActiveTextColors);
+    this.navBarButtonTextColors.animateTo(theme.navBarButtonTextColors);
+    this.navBarButtonActiveTextColors.animateTo(theme.navBarButtonActiveTextColors);
+
+    // Red gradient зависит от темы
+    this.redGradient.animateTo(this.colorScheme === 'dark' ? RED_GRADIENT_DARK : RED_GRADIENT_LIGHT);
+
+    // boxShadow не анимируется
+    this.boxShadow = theme.boxShadow;
+  }
+
+  async switchThemeAsync(): Promise<void> {
+    const theme = THEMES[this.colorScheme];
+    const [bgColors, bgX, bgY] = theme.backgroundGradient;
+    const [btnColors, btnX, btnY] = theme.buttonGradient;
+
+    this.backgroundGradient.setPosition(bgX, bgY);
+    this.buttonGradient.setPosition(btnX, btnY);
+
+    await Promise.all([
+      this.backgroundGradient.animateTo(bgColors),
+      this.buttonGradient.animateTo(btnColors),
+      this.color.animateTo(theme.color),
+      this.accentColor.animateTo(theme.accentColor),
+      this.goldColor.animateTo(theme.goldColor),
+      this.navBarButtonBackground.animateTo(theme.navBarButtonBackground),
+      this.buttonTextColors.animateTo(theme.buttonTextColors),
+      this.buttonActiveTextColors.animateTo(theme.buttonActiveTextColors),
+      this.navBarButtonTextColors.animateTo(theme.navBarButtonTextColors),
+      this.navBarButtonActiveTextColors.animateTo(theme.navBarButtonActiveTextColors),
+      this.redGradient.animateTo(this.colorScheme === 'dark' ? RED_GRADIENT_DARK : RED_GRADIENT_LIGHT),
+    ]);
+
+    this.boxShadow = theme.boxShadow;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Public API
+  // ─────────────────────────────────────────────────────────────────────────
+
+  setColorScheme(scheme: ColorScheme) {
+    this.colorScheme = scheme;
+  }
+
+  toggle() {
+    this.colorScheme = this.colorScheme === 'light' ? 'dark' : 'light';
+  }
+
+  /** Alias for toggle() */
+  toggleColorScheme() {
+    this.toggle();
+  }
+
+  get isDark() {
+    return this.colorScheme === 'dark';
+  }
+
+  /** Alias for isDark */
   get themeIsDark() {
-    return this.colorScheme === DARK;
+    return this.isDark;
   }
 
-  setProgressController = () => {
-    try {
-      this.progressController = createController(
-        'themeProgress',
-        { progress: this.themeIsDark ? 0 : 1 },
-        { config: ultraSpringTheme }
-      );
-      console.log('🎨 Theme progress controller initialized');
-    } catch (error) {
-      console.error('Failed to create progress controller:', error);
-    }
-  };
+  setInstant(scheme: ColorScheme) {
+    const theme = THEMES[scheme];
+    const [bgColors, bgX, bgY] = theme.backgroundGradient;
+    const [btnColors, btnX, btnY] = theme.buttonGradient;
 
-  /**
-   * Animate theme transition
-   */
-  animateThemeTransition = () => {
-    const targetProgress = this.themeIsDark ? 0 : 1;
-    this.progressController?.to({ progress: targetProgress });
-  };
+    this.backgroundGradient.setPosition(bgX, bgY);
+    this.buttonGradient.setPosition(btnX, btnY);
 
-  // ============================================================================
-  // Interpolation helpers (for use in components)
-  // ============================================================================
+    this.backgroundGradient.set(bgColors);
+    this.buttonGradient.set(btnColors);
+    this.color.set(theme.color);
+    this.accentColor.set(theme.accentColor);
+    this.goldColor.set(theme.goldColor);
+    this.navBarButtonBackground.set(theme.navBarButtonBackground);
+    this.buttonTextColors.set(theme.buttonTextColors);
+    this.buttonActiveTextColors.set(theme.buttonActiveTextColors);
+    this.navBarButtonTextColors.set(theme.navBarButtonTextColors);
+    this.navBarButtonActiveTextColors.set(theme.navBarButtonActiveTextColors);
+    this.redGradient.set(scheme === 'dark' ? RED_GRADIENT_DARK : RED_GRADIENT_LIGHT);
 
-  /**
-   * Get interpolated background gradient at progress t
-   */
-  getBackgroundAtProgress(t: number): string {
-    const colors = lerpOklchArrays(
-      this.darkBackgroundSpread,
-      this.lightBackgroundSpread,
-      t
-    );
-    return this.buildGradientCSS(colors, -30, -15);
+    this.boxShadow = theme.boxShadow;
+    this.colorScheme = scheme;
   }
 
-  /**
-   * Get interpolated button gradient at progress t
-   */
-  getButtonBackgroundAtProgress(t: number): string {
-    const colors = lerpOklchArrays(
-      this.darkButtonSpread,
-      this.lightButtonSpread,
-      t
-    );
-    return this.buildGradientCSS(colors, 100, 50);
+  // ─────────────────────────────────────────────────────────────────────────
+  // Rainbow effects
+  // ─────────────────────────────────────────────────────────────────────────
+
+  setRainbowAngle(angle: number) {
+    this.rainbowGradient.setAngle(angle);
   }
 
-  /**
-   * Get interpolated text color at progress t
-   */
-  getColorAtProgress(t: number): string {
-    const color = this.lerpColor(this.darkColor, this.lightColor, t);
-    return oklchToString(color);
+  setSpectralAngle(angle: number) {
+    this.spectralGradient.setAngle(angle);
   }
 
-  /**
-   * Get interpolated accent color at progress t
-   */
-  getAccentAtProgress(t: number): string {
-    const color = this.lerpColor(this.darkAccent, this.lightAccent, t);
-    return oklchToString(color);
+  // ─────────────────────────────────────────────────────────────────────────
+  // System Theme Sync
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /** Sync with system color scheme */
+  syncWithSystem() {
+    this.setColorScheme(getSystemColorScheme());
   }
 
-  /**
-   * Interpolate single color
-   */
-  private lerpColor(from: OklchTuple, to: OklchTuple, t: number): OklchTuple {
-    const l = from[0] + (to[0] - from[0]) * t;
-    const c = from[1] + (to[1] - from[1]) * t;
-    // Hue: shortest path
-    let h1 = from[2], h2 = to[2];
-    let diff = h2 - h1;
-    if (diff > 180) diff -= 360;
-    else if (diff < -180) diff += 360;
-    const h = ((h1 + diff * t) % 360 + 360) % 360;
-    return [l, c, h];
-  }
+  /** Watch for system theme changes */
+  watchSystemTheme(): () => void {
+    if (typeof window === 'undefined') return () => {};
 
-  /**
-   * Build CSS gradient string from spread colors
-   */
-  buildGradientCSS(spread: OklchTuple[], x: number = 50, y: number = 50): string {
-    const colors = spread.map(oklchToString).join(', ');
-    return `radial-gradient(circle at ${x}% ${y}%, ${colors})`;
-  }
-
-  // ============================================================================
-  // Legacy getters (for backwards compatibility)
-  // ============================================================================
-
-  get _getTheme() {
-    return gradient.getStandardTheme(this.themeIsDark);
-  }
-
-  get animatedTheme() {
-    return this._getTheme;
-  }
-
-  // ============================================================================
-  // ThemeToggle Controllers
-  // ============================================================================
-
-  get toggleAnimations() {
-    return {
-      path: this.pathController?.springs ?? {},
-      switch: this.switchController?.springs ?? {},
-      background: this.backgroundController?.springs ?? {},
-      glow: this.glowController?.springs ?? {},
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      this.setColorScheme(e.matches ? 'dark' : 'light');
     };
+
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
   }
 
-  setToggleControllers = () => {
-    try {
-      this.pathController = createController(
-        'themeTogglePath',
-        {
-          sunOpacity: this.themeIsDark ? 0 : 1,
-          moonOpacity: this.themeIsDark ? 1 : 0,
-          sunScale: this.themeIsDark ? 0.5 : 1,
-          moonScale: this.themeIsDark ? 1 : 0.5,
-          sunRotate: this.themeIsDark ? -180 : 0,
-          moonRotate: this.themeIsDark ? 0 : 180,
-        },
-        { config: toggleAnimationConfig.path }
-      );
+  // ─────────────────────────────────────────────────────────────────────────
+  // Cleanup
+  // ─────────────────────────────────────────────────────────────────────────
 
-      this.switchController = createController(
-        'themeToggleSwitch',
-        { x: this.themeIsDark ? 0 : 28 },
-        { config: toggleAnimationConfig.switch }
-      );
-
-      this.backgroundController = createController(
-        'themeToggleBackground',
-        { backgroundColor: this.themeIsDark ? '#1e293b' : '#fbbf24' },
-        { config: toggleAnimationConfig.background }
-      );
-
-      this.glowController = createController(
-        'themeToggleGlow',
-        { glowIntensity: this.themeIsDark ? 0.4 : 0.6 },
-        { config: toggleAnimationConfig.glow }
-      );
-
-      console.log('✨ ThemeToggle controllers initialized');
-    } catch (error) {
-      console.error('Failed to create toggle controllers:', error);
-    }
-  };
-
-  // ============================================================================
-  // Actions
-  // ============================================================================
-
-  toggleColorScheme = () => {
-    console.log(this.colorScheme === DARK ? '🌙 → ☀️' : '☀️ → 🌙');
-    this.colorScheme = !this.themeIsDark ? DARK : LIGHT;
-  };
-
-  setupReactions() {
-    const themeDispose = reaction(
-      () => [this.colorScheme],
-      () => {
-        this.animateThemeTransition();
-        this.updateToggleAnimations();
-        gradient.clearCache();
-      },
-      { fireImmediately: true }
-    );
-
-    this.disposers.push(themeDispose);
+  dispose() {
+    this.disposers.forEach(d => d());
+    this.disposers = [];
   }
-
-  updateToggleAnimations = () => {
-    this.pathController?.to({
-      sunOpacity: this.themeIsDark ? 0 : 1,
-      moonOpacity: this.themeIsDark ? 1 : 0,
-      sunScale: this.themeIsDark ? 0.5 : 1,
-      moonScale: this.themeIsDark ? 1 : 0.5,
-      sunRotate: this.themeIsDark ? -180 : 0,
-      moonRotate: this.themeIsDark ? 0 : 180,
-    });
-
-    this.switchController?.to({
-      x: this.themeIsDark ? 0 : 28,
-    });
-
-    this.backgroundController?.to({
-      backgroundColor: this.themeIsDark ? '#1e293b' : '#fbbf24',
-    });
-
-    this.glowController?.to({
-      glowIntensity: this.themeIsDark ? 0.4 : 0.6,
-    });
-  };
-
-  setSwitchSize = (size: 'sm' | 'md' | 'lg') => {
-    const offsets = { sm: 24, md: 28, lg: 32 };
-    this.switchController?.to({
-      x: this.themeIsDark ? 0 : offsets[size],
-    });
-  };
-
-  dispose = () => {
-    this.isDisposed = true;
-    this.disposers.forEach((dispose) => dispose());
-    this.progressController?.dispose();
-    this.pathController?.dispose();
-    this.switchController?.dispose();
-    this.backgroundController?.dispose();
-    this.glowController?.dispose();
-  };
 }
 
-// Singleton instance
-export const themeStore = new ThemeStore({ colorScheme: DARK });
+// ============================================================================
+// Singleton
+// ============================================================================
+
+export const themeStore = new ThemeStore();

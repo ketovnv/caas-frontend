@@ -1,11 +1,12 @@
 import { LoginButton } from 'features/auth';
 import { AnimatedText } from 'shared/ui';
-import { RAINBOWGRADIENT } from '@/shared';
+import { RAINBOWGRADIENT, themeStore } from '@/shared';
+import { animated } from '@react-spring/web';
 
 export function ExchangePage() {
   return (
     <div className="flex flex-col items-center justify-center flex-1 p-8 min-h-[60vh]">
-      <h1 className="text-5xl font-bold mb-2 text-yellow-200">Exchange</h1>
+      <animated.h1 style={themeStore.goldStyle} className="text-5xl font-bold mb-2">Exchange</animated.h1>
       <AnimatedText
         text="Swap crypto instantly"
         colors={RAINBOWGRADIENT}

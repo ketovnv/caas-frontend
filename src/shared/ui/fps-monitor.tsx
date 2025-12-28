@@ -1,34 +1,51 @@
 import {observer} from 'mobx-react-lite';
 import {core} from 'shared/model/core';
+import {useRef} from 'react';
+import {useResize, animated} from '@react-spring/web'
 
 export const FPSMonitor = observer(() => {
+    const fpsContainerRef = useRef<HTMLDivElement>(null);
+    const {width} = useResize({
+        container: fpsContainerRef,
+        // Опционально: настроим анимацию под свои нужды
+        config: {
+            tension: 200,
+            friction: 25,
+            mass: 1,
+        },
+    });
+
+    const fullWidth = width.to((w) => `${w + w/5}px`);
+    const paddingLeft = width.to((w) => `${w / 10}px`);
 
     return (
-        <div
+        <animated.div
             style={{
+                color: core.fps.to((value) => `oklch(70% 0.3 ${(value+1.5).toFixed(2)})`),
                 position: "fixed",
-                top: 100,
-                right: 10,
-                zIndex: 9999, // Добавил z-index, чтобы не перекрывалось контентом
-                background: "rgba(0,0,0,0.8)",
-                color: "#3388FF",
-                padding: "10px",
+                minWidth: width ?? '50px',
+                paddingLeft,
+                width: fullWidth,
+                height: 'auto',
+                overflow: 'hidden',
+                display: 'inline-block',
+                whiteSpace: 'nowrap',
+                top: 65,
+                left: 25,
+                zIndex: 9999,
+                background: "oklch(0.5 0.013 264.05 /.1)",
                 borderRadius: "8px",
-                fontFamily: "monospace",
-                pointerEvents: "none", // Чтобы клики проходили сквозь него
+                pointerEvents: "none",
                 backdropFilter: "blur(4px)"
             }}
         >
-            <div style={{fontWeight: 'bold'}}>Monitor: {core.fps} FPS</div>
+            <animated.span
+                ref={fpsContainerRef}
+                style={{display: 'inline-block', fontWeight: 'bold'}}
+            >
+                {core.fps.to((value) => '🎞️'+value.toFixed(0))}
+            </animated.span>
 
-            {/* Немного улучшил читаемость условий */}
-            <div style={{
-                color: core.fps > 90 ? "#1FB" : "#F54",
-                fontSize: "0.8em",
-                marginTop: "4px"
-            }}>
-                {core.fps < 90 ? "⚠️ Lagging" : "✅ Smooth"}
-            </div>
-        </div>
+        </animated.div>
     );
 });

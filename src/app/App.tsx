@@ -34,7 +34,7 @@ export function App() {
             }}
         >
             <Web3AuthProvider config={web3AuthContextConfig}>
-                <AnimatedThemeBackground fixed noise vignette>
+                <AnimatedThemeBackground fixed noise>
                     <NavLinks/>
                     <AuthSync/>
                     <main className="flex flex-col items-center min-h-screen px-4 py-16 gap-4">

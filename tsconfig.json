@@ -33,6 +33,5 @@
       "shared/*": ["src/shared/*"]
     }
   },
-  "include": ["src"],
-  "exclude": ["src/shared/ui/animated/inspira-ui"]
+  "include": ["src"],  
 }

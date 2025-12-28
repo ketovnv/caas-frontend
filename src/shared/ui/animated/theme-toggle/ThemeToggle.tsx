@@ -1,7 +1,10 @@
+import { useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated, useSpring, config } from '@react-spring/web';
 import { themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
+
+const DEBOUNCE_MS = 150;
 
 // ============================================================================
 // Types
@@ -32,6 +35,7 @@ export const ThemeToggle = observer(function ThemeToggle({
 }: ThemeToggleProps) {
   const { wrapper, icon, thumb, translate } = sizeConfig[size];
   const isDark = themeStore.themeIsDark;
+  const lastClickRef = useRef(0);
 
   // Thumb position animation
   const thumbSpring = useSpring({
@@ -104,6 +108,10 @@ export const ThemeToggle = observer(function ThemeToggle({
   });
 
   const handleClick = () => {
+    const now = Date.now();
+    if (now - lastClickRef.current < DEBOUNCE_MS) return;
+    lastClickRef.current = now;
+
     themeStore.toggleColorScheme();
     // Trigger glow animation
     glowApi.start({

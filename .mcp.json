@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "vs-claude": {
+      "command": "c:\\Users\\ketov\\.vscode\\extensions\\mariozechner.vs-claude-0.0.3\\build\\mcp\\mcp-server-windows-amd64.exe"
+    }
+  }
+}

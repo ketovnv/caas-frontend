@@ -1,316 +1,431 @@
-import chroma from 'chroma-js';
-import {
-  type ThemeConfig,
-  type OklchTuple,
-  type GradientConfig,
-  oklchToString,
-  STANDART_DARK,
-  STANDART_LIGHT,
-  RED_GRADIENT_DARK,
-  RED_GRADIENT_LIGHT,
-  SPECTRAL_GRADIENT,
-  RAINBOW_GRADIENT,
-} from 'shared/config';
+import { Controller, type SpringConfig, to, type Interpolation } from '@react-spring/core';
 
-// ============================================================================
-// Re-export types
-// ============================================================================
 
-export type { OklchTuple, GradientConfig, ThemeConfig };
-export { oklchToString };
+// Types
 
-// ============================================================================
-// Theme interface (rendered CSS strings)
-// ============================================================================
 
-export interface Theme {
-  color: string;
-  accentColor: string;
-  background: string;
-  buttonBackground: string;
-  boxShadow: string;
-  navBarButtonBackground: string;
-  buttonStartColor: string;
-  buttonStopColor: string;
-  buttonTextColors: string[];
-  buttonActiveTextColors: string[];
-  navBarButtonTextColors: string[];
-  navBarButtonActiveTextColors: string[];
-  redGradientColors: string[];
-}
+/** OKLCH color tuple: [Lightness 0-1, Chroma 0-0.4, Hue 0-360] */
+export type OklchTuple = readonly [l: number, c: number, h: number];
 
-// ============================================================================
-// OKLCH Math Utilities
-// ============================================================================
+/** Re-export SpringConfig for external use */
+export type { SpringConfig };
 
-/**
- * Interpolate hue on the shortest path around the color wheel
- */
-export function lerpHue(h1: number, h2: number, t: number): number {
-  let diff = h2 - h1;
+/** Promise that resolves when animation completes */
+export type SpringResult = Promise<void>;
 
-  // Shortest path around the wheel
-  if (diff > 180) diff -= 360;
-  else if (diff < -180) diff += 360;
+/** Convert any promise to Promise<void> */
+const asVoid = <T>(p: Promise<T>): SpringResult => p.then(() => {});
 
-  return ((h1 + diff * t) % 360 + 360) % 360;
-}
 
-/**
- * Interpolate between two OKLCH colors
- */
-export function lerpOklch(c1: OklchTuple, c2: OklchTuple, t: number): OklchTuple {
-  return [
-    c1[0] + (c2[0] - c1[0]) * t,  // L - linear
-    c1[1] + (c2[1] - c1[1]) * t,  // C - linear
-    lerpHue(c1[2], c2[2], t),      // H - shortest path
-  ];
-}
 
-/**
- * Interpolate between two arrays of OKLCH colors
- */
-export function lerpOklchArrays(
-  from: OklchTuple[],
-  to: OklchTuple[],
-  t: number
-): OklchTuple[] {
-  const length = Math.max(from.length, to.length);
-  const result: OklchTuple[] = [];
 
-  for (let i = 0; i < length; i++) {
-    const c1 = from[i] || from[from.length - 1] || [0, 0, 0];
-    const c2 = to[i] || to[to.length - 1] || [0, 0, 0];
-    result.push(lerpOklch(c1 as OklchTuple, c2 as OklchTuple, t));
-  }
+// Utils
 
-  return result;
-}
 
-// ============================================================================
-// Gradient Utilities Class
-// ============================================================================
+const normalizeHue = (h: number) => ((h % 360) + 360) % 360;
 
-class GradientUtils {
-  private gradientCache = new Map<string, string>();
-  private spreadCache = new Map<string, OklchTuple[]>();
-
-  // ---------------------------------------------------------------------------
-  // Spread: expand colors to N steps (pure math, no chroma during animation)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Spread colors to N steps using linear interpolation in OKLCH space.
-   * This is the key function - call it ONCE to precompute, then animate between results.
-   */
-  spread(colors: OklchTuple[], steps: number = 128): OklchTuple[] {
-    if (colors.length === 0) return [];
-    if (colors.length === 1) return Array(steps).fill(colors[0]);
-
-    const cacheKey = `spread_${JSON.stringify(colors)}_${steps}`;
-    const cached = this.spreadCache.get(cacheKey);
-    if (cached) return cached;
-
-    const result: OklchTuple[] = [];
-    const segments = colors.length - 1;
-
-    for (let i = 0; i < steps; i++) {
-      const t = i / (steps - 1);
-      const segmentFloat = t * segments;
-      const segmentIndex = Math.min(Math.floor(segmentFloat), segments - 1);
-      const segmentT = segmentFloat - segmentIndex;
-
-      const c1 = colors[segmentIndex]!;
-      const c2 = colors[segmentIndex + 1]!;
-
-      result.push(lerpOklch(c1, c2, segmentT));
-    }
-
-    this.spreadCache.set(cacheKey, result);
-    return result;
-  }
-
-  /**
-   * Spread colors and return as CSS strings
-   */
-  spreadStrings(colors: OklchTuple[], steps: number = 128): string[] {
-    return this.spread(colors, steps).map(oklchToString);
-  }
-
-  // ---------------------------------------------------------------------------
-  // CSS Gradient Generation
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Create CSS radial gradient from OKLCH colors
-   */
-  radialGradient(
-    colors: OklchTuple[],
-    x: number = 50,
-    y: number = 50,
-    steps: number = 128
-  ): string {
-    const cacheKey = `radial_${JSON.stringify(colors)}_${x}_${y}_${steps}`;
-    const cached = this.gradientCache.get(cacheKey);
-    if (cached) return cached;
-
-    const spread = this.spreadStrings(colors, steps);
-    const result = `radial-gradient(circle at ${x}% ${y}%, ${spread.join(', ')})`;
-
-    this.gradientCache.set(cacheKey, result);
-    return result;
-  }
-
-  /**
-   * Create CSS radial gradient from GradientConfig
-   */
-  radialGradientFromConfig(config: GradientConfig): string {
-    const [colors, x, y, steps] = config;
-    return this.radialGradient(colors, x, y, steps);
-  }
-
-  /**
-   * Create CSS linear gradient from OKLCH colors
-   */
-  linearGradient(
-    colors: OklchTuple[],
-    angle: number = 0,
-    steps: number = 128
-  ): string {
-    const cacheKey = `linear_${JSON.stringify(colors)}_${angle}_${steps}`;
-    const cached = this.gradientCache.get(cacheKey);
-    if (cached) return cached;
-
-    const spread = this.spreadStrings(colors, steps);
-    const result = `linear-gradient(${angle}deg, ${spread.join(', ')})`;
-
-    this.gradientCache.set(cacheKey, result);
-    return result;
-  }
-
-  /**
-   * Create CSS conic gradient from OKLCH colors
-   */
-  conicGradient(
-    colors: OklchTuple[],
-    fromAngle: number = 0,
-    x: number = 50,
-    y: number = 50,
-    steps: number = 128
-  ): string {
-    const spread = this.spreadStrings(colors, steps);
-    return `conic-gradient(from ${fromAngle}deg at ${x}% ${y}%, ${spread.join(', ')})`;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Theme System
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Get rendered theme (CSS strings) from config
-   */
-  getTheme(config: ThemeConfig): Theme {
-    const background = this.radialGradientFromConfig(config.backgroundGradient);
-    const buttonBackground = this.radialGradientFromConfig(config.buttonGradient);
-
-    return {
-      color: oklchToString(config.color),
-      accentColor: oklchToString(config.accentColor),
-      background,
-      buttonBackground,
-      boxShadow: config.boxShadow,
-      navBarButtonBackground: oklchToString(config.navBarButtonBackground),
-      buttonStartColor: oklchToString(config.buttonGradient[0][0]!),
-      buttonStopColor: oklchToString(config.buttonGradient[0][3] ?? config.buttonGradient[0][0]!),
-      buttonTextColors: config.buttonTextColors.map(oklchToString),
-      buttonActiveTextColors: config.buttonActiveTextColors.map(oklchToString),
-      navBarButtonTextColors: config.navBarButtonTextColors.map(oklchToString),
-      navBarButtonActiveTextColors: config.navBarButtonActiveTextColors.map(oklchToString),
-      redGradientColors: (config === STANDART_DARK ? RED_GRADIENT_DARK : RED_GRADIENT_LIGHT).map(oklchToString),
-    };
-  }
-
-  /**
-   * Get standard theme by isDark flag
-   */
-  getStandardTheme(isDark: boolean): Theme {
-    return this.getTheme(isDark ? STANDART_DARK : STANDART_LIGHT);
-  }
-
-  /**
-   * Get raw theme config
-   */
-  getThemeConfig(isDark: boolean): ThemeConfig {
-    return isDark ? STANDART_DARK : STANDART_LIGHT;
-  }
-
-  /**
-   * Get precomputed spread colors for theme animation
-   */
-  getThemeSpread(isDark: boolean, steps: number = 128) {
-    const config = this.getThemeConfig(isDark);
-    return {
-      background: this.spread(config.backgroundGradient[0], steps),
-      button: this.spread(config.buttonGradient[0], steps),
-    };
-  }
-
-  // ---------------------------------------------------------------------------
-  // Color Conversion (uses chroma for parsing external colors)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Parse any color string to OKLCH tuple
-   */
-  parseToOklch(color: string): OklchTuple {
-    try {
-      const [l, c, h] = chroma(color).oklch();
-      return [l || 0, c || 0, isNaN(h) ? 0 : h];
-    } catch {
-      console.warn(`Failed to parse color: ${color}`);
-      return [0, 0, 0];
-    }
-  }
-
-  /**
-   * Parse array of color strings to OKLCH tuples
-   */
-  parseArrayToOklch(colors: string[]): OklchTuple[] {
-    return colors.map(c => this.parseToOklch(c));
-  }
-
-  /**
-   * Convert OKLCH tuple to hex
-   */
-  toHex(color: OklchTuple): string {
-    return chroma.oklch(...color).hex();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Cache Management
-  // ---------------------------------------------------------------------------
-
-  clearCache(): void {
-    this.gradientCache.clear();
-    this.spreadCache.clear();
-  }
-}
-
-// ============================================================================
-// Singleton Export
-// ============================================================================
-
-export const gradient = new GradientUtils();
-
-// ============================================================================
-// Re-exports for convenience
-// ============================================================================
-
-export {
-  STANDART_DARK,
-  STANDART_LIGHT,
-  RED_GRADIENT_DARK,
-  RED_GRADIENT_LIGHT,
-  SPECTRAL_GRADIENT,
-  RAINBOW_GRADIENT,
+const shortestHuePath = (from: number, to: number): number => {
+  const diff = normalizeHue(to) - normalizeHue(from);
+  if (diff > 180) return to - 360;
+  if (diff < -180) return to + 360;
+  return to;
 };
+
+export const DEFAULT_SPRING_CONFIG: SpringConfig = { tension: 120, friction: 14 };
+
+
+// ColorSpring — один OKLCH цвет
+
+
+export class ColorSpring {
+  private ctrl: Controller<{ l: number; c: number; h: number }>;
+  readonly value: Interpolation<string>;
+
+  constructor(initial: OklchTuple, config: SpringConfig = DEFAULT_SPRING_CONFIG) {
+    this.ctrl = new Controller({
+      l: initial[0],
+      c: initial[1],
+      h: initial[2],
+      config,
+    });
+
+    const springs = this.ctrl.springs;
+    this.value = to(
+        [springs.l, springs.c, springs.h],
+        (l, c, h) => `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${normalizeHue(h).toFixed(1)})`
+    );
+  }
+
+  animateTo(target: OklchTuple, config?: SpringConfig): SpringResult {
+    const currentH = this.ctrl.springs.h.get();
+    return asVoid(this.ctrl.start({
+      l: target[0],
+      c: target[1],
+      h: shortestHuePath(currentH, target[2]),
+      config,
+    }));
+  }
+
+  set(target: OklchTuple) {
+    this.ctrl.set({ l: target[0], c: target[1], h: target[2] });
+  }
+
+  stop() {
+    this.ctrl.stop();
+  }
+
+  /** Get current OKLCH values */
+  get current(): OklchTuple {
+    const s = this.ctrl.springs;
+    return [s.l.get(), s.c.get(), s.h.get()];
+  }
+}
+
+
+// GradientSpring — 4 OKLCH цвета → radial/linear/conic gradient
+
+
+type GradientType = 'radial' | 'linear' | 'conic';
+
+interface GradientOptions {
+  type?: GradientType;
+  x?: number;
+  y?: number;
+  angle?: number;
+}
+
+interface FlatColors {
+  l0: number; c0: number; h0: number;
+  l1: number; c1: number; h1: number;
+  l2: number; c2: number; h2: number;
+  l3: number; c3: number; h3: number;
+}
+
+export class GradientSpring {
+  private ctrl: Controller<FlatColors>;
+  private options: Required<GradientOptions>;
+  readonly value: Interpolation<string>;
+
+  constructor(
+      initial: OklchTuple[],
+      options: GradientOptions = {},
+      config: SpringConfig = DEFAULT_SPRING_CONFIG
+  ) {
+    this.options = {
+      type: options.type ?? 'radial',
+      x: options.x ?? 50,
+      y: options.y ?? 50,
+      angle: options.angle ?? 180,
+    };
+
+    this.ctrl = new Controller({
+      ...this.flatten(initial),
+      config,
+    });
+
+    const s = this.ctrl.springs;
+    this.value = to(
+        [s.l0, s.c0, s.h0, s.l1, s.c1, s.h1, s.l2, s.c2, s.h2, s.l3, s.c3, s.h3],
+        (l0, c0, h0, l1, c1, h1, l2, c2, h2, l3, c3, h3) => {
+          const fmt = (l: number, c: number, h: number) =>
+              `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${normalizeHue(h).toFixed(1)})`;
+
+          const colors = [fmt(l0, c0, h0), fmt(l1, c1, h1), fmt(l2, c2, h2), fmt(l3, c3, h3)].join(', ');
+          const { type, x, y, angle } = this.options;
+
+          switch (type) {
+            case 'linear': return `linear-gradient(${angle}deg, ${colors})`;
+            case 'conic': return `conic-gradient(from ${angle}deg at ${x}% ${y}%, ${colors})`;
+            default: return `radial-gradient(circle at ${x}% ${y}%, ${colors})`;
+          }
+        }
+    );
+  }
+
+  animateTo(target: OklchTuple[], config?: SpringConfig): SpringResult {
+    const s = this.ctrl.springs;
+    const flat = this.flatten(target);
+
+    return asVoid(this.ctrl.start({
+      ...flat,
+      h0: shortestHuePath(s.h0.get(), flat.h0),
+      h1: shortestHuePath(s.h1.get(), flat.h1),
+      h2: shortestHuePath(s.h2.get(), flat.h2),
+      h3: shortestHuePath(s.h3.get(), flat.h3),
+      config,
+    }));
+  }
+
+  set(target: OklchTuple[]) {
+    this.ctrl.set(this.flatten(target));
+  }
+
+  stop() {
+    this.ctrl.stop();
+  }
+
+  setPosition(x: number, y: number) {
+    this.options.x = x;
+    this.options.y = y;
+  }
+
+  private flatten(colors: OklchTuple[]): FlatColors {
+    return {
+      l0: colors[0]![0], c0: colors[0]![1], h0: colors[0]![2],
+      l1: colors[1]![0], c1: colors[1]![1], h1: colors[1]![2],
+      l2: colors[2]![0], c2: colors[2]![1], h2: colors[2]![2],
+      l3: colors[3]![0], c3: colors[3]![1], h3: colors[3]![2],
+    };
+  }
+}
+
+
+// ColorArraySpring — массив из 4 независимых OKLCH цветов (для buttonText и т.д.)
+// Возвращает массив из 4 интерполяций
+
+
+export class ColorArraySpring {
+  private ctrls: Controller<{ l: number; c: number; h: number }>[];
+  readonly values: Interpolation<string>[];
+
+  constructor(initial: OklchTuple[], config: SpringConfig = DEFAULT_SPRING_CONFIG) {
+    this.ctrls = initial.map(color => new Controller({
+      l: color[0],
+      c: color[1],
+      h: color[2],
+      config,
+    }));
+
+    this.values = this.ctrls.map(ctrl => {
+      const s = ctrl.springs;
+      return to(
+          [s.l, s.c, s.h],
+          (l, c, h) => `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${normalizeHue(h).toFixed(1)})`
+      );
+    });
+  }
+
+  animateTo(target: OklchTuple[], config?: SpringConfig): SpringResult {
+    return asVoid(Promise.all(
+        this.ctrls.map((ctrl, i) => {
+          const currentH = ctrl.springs.h.get();
+          return ctrl.start({
+            l: target[i]![0],
+            c: target[i]![1],
+            h: shortestHuePath(currentH, target[i]![2]),
+            config,
+          });
+        })
+    ));
+  }
+
+  set(target: OklchTuple[]) {
+    this.ctrls.forEach((ctrl, i) => {
+      ctrl.set({ l: target[i]![0], c: target[i]![1], h: target[i]![2] });
+    });
+  }
+
+  stop() {
+    this.ctrls.forEach(ctrl => ctrl.stop());
+  }
+
+  /** Get interpolation for specific color index */
+  get(index: number): Interpolation<string> {
+    return this.values[index]!;
+  }
+}
+
+
+// MultiStopGradientSpring — градиент с произвольным числом цветов (для rainbow)
+
+export class MultiStopGradientSpring {
+  private ctrls: Controller<{ l: number; c: number; h: number }>[];
+  readonly value: Interpolation<string>;
+  private options: { type: 'linear' | 'radial' | 'conic'; angle: number; x: number; y: number };
+
+  constructor(
+      initial: OklchTuple[],
+      options: { type?: 'linear' | 'radial' | 'conic'; angle?: number; x?: number; y?: number } = {},
+      config: SpringConfig = DEFAULT_SPRING_CONFIG
+  ) {
+    this.options = {
+      type: options.type ?? 'linear',
+      angle: options.angle ?? 90,
+      x: options.x ?? 50,
+      y: options.y ?? 50,
+    };
+
+    this.ctrls = initial.map(color => new Controller({
+      l: color[0],
+      c: color[1],
+      h: color[2],
+      config,
+    }));
+
+    // Собираем все springs в один to()
+    const allSprings = this.ctrls.flatMap(ctrl => [ctrl.springs.l, ctrl.springs.c, ctrl.springs.h]);
+
+    this.value = to(allSprings, (...values) => {
+      const colors: string[] = [];
+      for (let i = 0; i < values.length; i += 3) {
+        const l = values[i] as number;
+        const c = values[i + 1] as number;
+        const h = values[i + 2] as number;
+        colors.push(`oklch(${l.toFixed(3)} ${c.toFixed(3)} ${normalizeHue(h).toFixed(1)})`);
+      }
+
+      const { type, angle, x, y } = this.options;
+      switch (type) {
+        case 'radial': return `radial-gradient(circle at ${x}% ${y}%, ${colors.join(', ')})`;
+        case 'conic': return `conic-gradient(from ${angle}deg at ${x}% ${y}%, ${colors.join(', ')})`;
+        default: return `linear-gradient(${angle}deg, ${colors.join(', ')})`;
+      }
+    });
+  }
+
+  animateTo(target: OklchTuple[], config?: SpringConfig): SpringResult {
+    return asVoid(Promise.all(
+        this.ctrls.map((ctrl, i) => {
+          const currentH = ctrl.springs.h.get();
+          const t = target[i] ?? target[target.length - 1]!;
+          return ctrl.start({
+            l: t[0],
+            c: t[1],
+            h: shortestHuePath(currentH, t[2]),
+            config,
+          });
+        })
+    ));
+  }
+
+  set(target: OklchTuple[]) {
+    this.ctrls.forEach((ctrl, i) => {
+      const t = target[i] ?? target[target.length - 1]!;
+      ctrl.set({ l: t[0], c: t[1], h: t[2] });
+    });
+  }
+
+  stop() {
+    this.ctrls.forEach(ctrl => ctrl.stop());
+  }
+
+  setAngle(angle: number) {
+    this.options.angle = angle;
+  }
+
+  setPosition(x: number, y: number) {
+    this.options.x = x;
+    this.options.y = y;
+  }
+}
+
+
+// DynamicColorArraySpring — массив произвольного числа OKLCH цветов
+// Возвращает массив интерполяций + готовую строку для CSS gradient
+
+
+export class DynamicColorArraySpring {
+  private ctrls: Controller<{ l: number; c: number; h: number }>[];
+  private config: SpringConfig;
+
+  constructor(initial: OklchTuple[], config: SpringConfig = DEFAULT_SPRING_CONFIG) {
+    this.config = config;
+    this.ctrls = initial.map(color => new Controller({
+      l: color[0],
+      c: color[1],
+      h: color[2],
+      config,
+    }));
+  }
+
+  /** Get array of animated color strings */
+  get values(): Interpolation<string>[] {
+    return this.ctrls.map(ctrl => {
+      const s = ctrl.springs;
+      return to(
+        [s.l, s.c, s.h],
+        (l, c, h) => `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${normalizeHue(h).toFixed(1)})`
+      );
+    });
+  }
+
+  /** Get combined gradient string (for CSS background) */
+  gradientString(_angle: number = 90): Interpolation<string> {
+    const allSprings = this.ctrls.flatMap(ctrl => [ctrl.springs.l, ctrl.springs.c, ctrl.springs.h]);
+
+    return to(allSprings, (...vals) => {
+      const colors: string[] = [];
+      for (let i = 0; i < vals.length; i += 3) {
+        const l = vals[i] as number;
+        const c = vals[i + 1] as number;
+        const h = vals[i + 2] as number;
+        colors.push(`oklch(${l.toFixed(3)} ${c.toFixed(3)} ${normalizeHue(h).toFixed(1)})`);
+      }
+      return colors.join(', ');
+    });
+  }
+
+  /** Number of colors */
+  get length(): number {
+    return this.ctrls.length;
+  }
+
+  /** Animate to new colors (resizes if needed) */
+  animateTo(target: OklchTuple[], config?: SpringConfig): SpringResult {
+    // Resize controllers if needed
+    while (this.ctrls.length < target.length) {
+      const lastColor = target[this.ctrls.length] ?? target[target.length - 1]!;
+      this.ctrls.push(new Controller({
+        l: lastColor[0],
+        c: lastColor[1],
+        h: lastColor[2],
+        config: this.config,
+      }));
+    }
+
+    // Animate all controllers
+    return asVoid(Promise.all(
+      this.ctrls.slice(0, target.length).map((ctrl, i) => {
+        const currentH = ctrl.springs.h.get();
+        const t = target[i]!;
+        return ctrl.start({
+          l: t[0],
+          c: t[1],
+          h: shortestHuePath(currentH, t[2]),
+          config,
+        });
+      })
+    ));
+  }
+
+  /** Set colors instantly */
+  set(target: OklchTuple[]) {
+    // Resize if needed
+    while (this.ctrls.length < target.length) {
+      const t = target[this.ctrls.length] ?? target[target.length - 1]!;
+      this.ctrls.push(new Controller({
+        l: t[0],
+        c: t[1],
+        h: t[2],
+        config: this.config,
+      }));
+    }
+
+    this.ctrls.slice(0, target.length).forEach((ctrl, i) => {
+      const t = target[i]!;
+      ctrl.set({ l: t[0], c: t[1], h: t[2] });
+    });
+  }
+
+  stop() {
+    this.ctrls.forEach(ctrl => ctrl.stop());
+  }
+
+  /** Get current OKLCH values */
+  get current(): OklchTuple[] {
+    return this.ctrls.map(ctrl => {
+      const s = ctrl.springs;
+      return [s.l.get(), s.c.get(), s.h.get()] as const;
+    });
+  }
+}

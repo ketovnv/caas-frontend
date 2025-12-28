@@ -1,5 +1,6 @@
 import {makeAutoObservable, runInAction} from "mobx";
 import {raf} from "@react-spring/rafz";
+import { SpringValue } from "@react-spring/web";
 
 
 export class CoreStore {
@@ -7,7 +8,11 @@ export class CoreStore {
     // FPS tracking
     private frameCount = 0;
     private lastFpsUpdate = 0;
-    private currentFps = 143;
+
+
+    fpsSpring = new SpringValue(143, {
+        config: { tension: 200, friction: 60, mass: 5 }
+    });
 
     constructor() {
         makeAutoObservable(this);
@@ -16,7 +21,7 @@ export class CoreStore {
 
     // Get metrics directly from rafz
     get fps() {
-        return this.currentFps;
+        return this.fpsSpring;
     }
 
     get currentTime() {
@@ -33,7 +38,7 @@ export class CoreStore {
 
                 // Обновляем Observable только раз в секунду
                 runInAction(() => {
-                    this.currentFps = currentFps;
+                    this.fpsSpring.start(currentFps);
                 });
 
                 this.lastFpsUpdate = now;

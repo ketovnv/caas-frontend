@@ -41,6 +41,7 @@ export {
     type AnimatedCounterRef,
     AnimatedList, type AnimatedListProps, type AnimatedListRef,
     AnimatedTabs, type AnimatedTabsProps, type AnimatedTabsRef, type Tab,
+    MorphingTabs, type MorphingTabsProps, type MorphingTab,
     Skeleton,
     SkeletonText,
     SkeletonCard,

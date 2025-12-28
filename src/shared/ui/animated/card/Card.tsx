@@ -1,32 +1,12 @@
-import { forwardRef, useRef, useState, useCallback, useEffect, type ReactNode, type HTMLAttributes } from 'react';
-import { useSpring, animated, to, type SpringValue } from '@react-spring/web';
+import { forwardRef, useRef, useState, useCallback, type ReactNode, type HTMLAttributes } from 'react';
+import { useSpring, animated, to } from '@react-spring/web';
 import { cn } from 'shared/lib';
-
-// ============================================================================
-// Custom Spring Configs - Organic feel
-// ============================================================================
-
-const cardConfigs = {
-  // Responsive tilt with subtle overshoot
-  tilt: { tension: 450, friction: 30, mass: 1 },
-  // Smooth hover with slight bounce
-  hover: { tension: 380, friction: 26 },
-  // Quick snap back
-  snap: { tension: 500, friction: 28 },
-  // Soft glow pulse
-  glow: { tension: 200, friction: 18 },
-  // Entry animation
-  entry: { tension: 280, friction: 60, mass: 1.2 },
-  // Morphing border
-  morph: { tension: 350, friction: 20 },
-};
 
 // ============================================================================
 // Types
 // ============================================================================
 
 type CardVariant = 'default' | 'elevated' | 'glass' | 'gradient' | 'neon';
-type AnimationPreset = 'fadeIn' | 'slideInUp' | 'zoomIn' | 'flipInY';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
@@ -42,39 +22,7 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   morphing?: boolean;
   /** Card visual variant */
   variant?: CardVariant;
-  /** Entry animation preset */
-  animationPreset?: AnimationPreset;
-  /** External spring values for imperative control */
-  externalScale?: SpringValue<number>;
-  externalX?: SpringValue<number>;
-  externalY?: SpringValue<number>;
-  externalRotateX?: SpringValue<number>;
-  externalRotateY?: SpringValue<number>;
-  externalOpacity?: SpringValue<number>;
 }
-
-// ============================================================================
-// Animation Presets with spring physics
-// ============================================================================
-
-const presets: Record<AnimationPreset, { from: Record<string, number>; to: Record<string, number> }> = {
-  fadeIn: {
-    from: { opacity: 0, scale: 1, y: 0, rotateY: 0 },
-    to: { opacity: 1, scale: 1, y: 0, rotateY: 0 },
-  },
-  slideInUp: {
-    from: { opacity: 0, scale: 1, y: 30, rotateY: 0 },
-    to: { opacity: 1, scale: 1, y: 0, rotateY: 0 },
-  },
-  zoomIn: {
-    from: { opacity: 0, scale: 0.85, y: 0, rotateY: 0 },
-    to: { opacity: 1, scale: 1, y: 0, rotateY: 0 },
-  },
-  flipInY: {
-    from: { opacity: 0, scale: 1, y: 0, rotateY: 90 },
-    to: { opacity: 1, scale: 1, y: 0, rotateY: 0 },
-  },
-};
 
 // ============================================================================
 // Variant Styles
@@ -103,13 +51,6 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       tiltIntensity = 0.15,
       morphing = false,
       variant = 'default',
-      animationPreset = 'fadeIn',
-      externalScale,
-      externalX,
-      externalY,
-      externalRotateX,
-      externalRotateY,
-      externalOpacity,
       ...props
     },
     ref
@@ -117,41 +58,20 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     const cardRef = useRef<HTMLDivElement>(null);
     const bounds = useRef({ width: 0, height: 0, left: 0, top: 0 });
     const [isHovered, setIsHovered] = useState(false);
-    const preset = presets[animationPreset];
 
-    // Main transform spring - all values in one for proper interpolation
+    // Spring for hover/tilt effects only - NO opacity animation
     const [springs, api] = useSpring(() => ({
-      // Base transform values
-      opacity: preset.from.opacity ?? 1,
-      scale: preset.from.scale ?? 1,
       x: 0,
-      y: preset.from.y ?? 0,
+      y: 0,
       rotateX: 0,
-      rotateY: preset.from.rotateY ?? 0,
-      // Hover effects
-      hoverScale: 1,
+      rotateY: 0,
+      scale: 1,
       shadowBlur: 8,
       shadowY: 4,
       glowOpacity: 0,
-      glowBlur: 0,
       borderRadius: 12,
-      config: cardConfigs.entry,
+      config: { tension: 400, friction: 30 },
     }));
-
-    // Entry animation - use useEffect to avoid state update during render
-    const hasEnteredRef = useRef(false);
-    useEffect(() => {
-      if (hasEnteredRef.current) return;
-      hasEnteredRef.current = true;
-
-      api.start({
-        opacity: preset.to.opacity ?? 1,
-        scale: preset.to.scale ?? 1,
-        y: preset.to.y ?? 0,
-        rotateY: preset.to.rotateY ?? 0,
-        config: cardConfigs.entry,
-      });
-    }, [api, preset.to]);
 
     const updateBounds = useCallback(() => {
       const el = cardRef.current;
@@ -171,27 +91,19 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         const { width, height, left, top } = bounds.current;
         if (width === 0) return;
 
-        // Normalized mouse position (-1 to 1)
         const mouseX = (e.clientX - left - width / 2) / (width / 2);
         const mouseY = (e.clientY - top - height / 2) / (height / 2);
 
-        // Clamp values
         const clampedX = Math.max(-1, Math.min(1, mouseX));
         const clampedY = Math.max(-1, Math.min(1, mouseY));
 
-        const updates: Record<string, number> = {
+        api.start({
           rotateX: -clampedY * tiltIntensity * 20,
           rotateY: clampedX * tiltIntensity * 20,
-        };
-
-        if (magnetic) {
-          updates.x = clampedX * 12;
-          updates.y = clampedY * 12;
-        }
-
-        api.start({
-          ...updates,
-          config: cardConfigs.tilt,
+          ...(magnetic && {
+            x: clampedX * 12,
+            y: clampedY * 12,
+          }),
         });
       },
       [hover, magnetic, tiltIntensity, api]
@@ -201,26 +113,12 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       updateBounds();
       setIsHovered(true);
 
-      const updates: Record<string, number> = {};
-
-      if (hover) {
-        updates.hoverScale = 1.03;
-        updates.shadowBlur = 25;
-        updates.shadowY = 12;
-      }
-
-      if (glow) {
-        updates.glowOpacity = 0.85;
-        updates.glowBlur = 25;
-      }
-
-      if (morphing) {
-        updates.borderRadius = 24;
-      }
-
       api.start({
-        ...updates,
-        config: cardConfigs.hover,
+        scale: hover ? 1.03 : 1,
+        shadowBlur: 25,
+        shadowY: 12,
+        glowOpacity: glow ? 0.85 : 0,
+        borderRadius: morphing ? 24 : 12,
       });
     }, [updateBounds, hover, glow, morphing, api]);
 
@@ -229,31 +127,21 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
 
       api.start({
         x: 0,
+        y: 0,
         rotateX: 0,
         rotateY: 0,
-        hoverScale: 1,
+        scale: 1,
         shadowBlur: 8,
         shadowY: 4,
         glowOpacity: 0,
-        glowBlur: 0,
-        borderRadius: morphing ? 12 : 12,
-        config: cardConfigs.snap,
+        borderRadius: 12,
       });
-    }, [morphing, api]);
+    }, [api]);
 
-    // Use external springs if provided, otherwise use internal
-    const finalScale = externalScale ?? springs.scale;
-    const finalX = externalX ?? springs.x;
-    const finalY = externalY ?? springs.y;
-    const finalRotateX = externalRotateX ?? springs.rotateX;
-    const finalRotateY = externalRotateY ?? springs.rotateY;
-    const finalOpacity = externalOpacity ?? springs.opacity;
-
-    // Proper reactive transform using `to()`
     const transform = to(
-      [finalScale, finalX, finalY, finalRotateX, finalRotateY, springs.hoverScale],
-      (scale, x, y, rx, ry, hs) =>
-        `perspective(1000px) scale(${(scale as number) * (hs as number)}) translateX(${x}px) translateY(${y}px) rotateX(${rx}deg) rotateY(${ry}deg)`
+      [springs.x, springs.y, springs.rotateX, springs.rotateY, springs.scale],
+      (x, y, rx, ry, s) =>
+        `perspective(1000px) translateX(${x}px) translateY(${y}px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`
     );
 
     const boxShadow = to(
@@ -269,16 +157,15 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
           else if (ref) ref.current = node;
         }}
         className={cn(
-          'relative overflow-hidden',
+          'relative overflow-hidden rounded-xl',
           variantStyles[variant],
           className
         )}
         style={{
           transform,
-          opacity: finalOpacity,
-          borderRadius: morphing ? springs.borderRadius.to((r) => `${r}px`) : '0.75rem',
+          borderRadius: morphing ? springs.borderRadius.to((r) => `${r}px`) : undefined,
           boxShadow: hover ? boxShadow : undefined,
-          willChange: 'transform, opacity',
+          willChange: 'transform',
         }}
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
@@ -291,7 +178,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
             className="absolute inset-0 -z-10 pointer-events-none"
             style={{
               opacity: springs.glowOpacity,
-              filter: springs.glowBlur.to((b) => `blur(${b}px)`),
+              filter: 'blur(25px)',
               transform: 'scale(1.1)',
             }}
           >

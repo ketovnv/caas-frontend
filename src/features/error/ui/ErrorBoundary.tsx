@@ -126,7 +126,7 @@ export const DefaultErrorFallback: FC<{
     retryCount: number;
     canRetry: boolean;
 }> = ({ error, retryCount}) => (
-    <div className="flex items-center justify-center p-16">
+    <div className="h-dvh flex p-16 justify-center items-start  bg-orange-400">
         <div className="bg-red-950 border border-red-500 rounded-lg p-6 max-w-md w-full">
             <div className="flex items-center mb-4">
                 <div>
@@ -136,7 +136,7 @@ export const DefaultErrorFallback: FC<{
                     {/*</svg>*/}
                 </div>
                 <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-500">
+                    <h3 className="px-2 text-red-500 font-medium bg-red-100 rounded-2xl">
                         Произошла ошибка
                     </h3>
                 </div>

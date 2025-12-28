@@ -1,24 +1,6 @@
-import {
-  useState,
-  forwardRef,
-  useImperativeHandle,
-  type ReactNode,
-} from 'react';
-import { useSpring, animated, to } from '@react-spring/web';
+import { forwardRef, useState, type ReactNode } from 'react';
+import { useSpring, animated } from '@react-spring/web';
 import { cn } from 'shared/lib';
-
-// ============================================================================
-// Custom spring configs for card flip
-// ============================================================================
-
-const flipConfigs = {
-  // Satisfying flip with overshoot
-  flip: { tension: 280, friction: 60, mass: 1 },
-  // Bouncy hover
-  hover: { tension: 400, friction: 25 },
-  // Quick tap response
-  tap: { tension: 500, friction: 30 },
-};
 
 // ============================================================================
 // Types
@@ -29,12 +11,10 @@ type RotateAxis = 'x' | 'y';
 export interface FlipCardProps {
   /** Front content */
   children?: ReactNode;
-  /** Back content (default fallback provided) */
+  /** Back content */
   back?: ReactNode;
   /** Rotation axis */
   rotate?: RotateAxis;
-  /** Flip on hover (default) or click */
-  trigger?: 'hover' | 'click';
   /** Additional container classes */
   className?: string;
   /** Front side classes */
@@ -43,109 +23,33 @@ export interface FlipCardProps {
   backClassName?: string;
 }
 
-export interface FlipCardRef {
-  /** Flip to front */
-  flipToFront: () => void;
-  /** Flip to back */
-  flipToBack: () => void;
-  /** Toggle flip */
-  toggle: () => void;
-  /** Get current state */
-  isFlipped: () => boolean;
-}
-
 // ============================================================================
-// Component - Full React Spring implementation
+// Component - React Spring with bouncy physics
 // ============================================================================
 
-export const FlipCard = forwardRef<FlipCardRef, FlipCardProps>(
+export const FlipCard = forwardRef<HTMLDivElement, FlipCardProps>(
   (
     {
       children,
       back,
       rotate = 'y',
-      trigger = 'hover',
       className,
       frontClassName,
       backClassName,
     },
     ref
   ) => {
-    const [flipped, setFlipped] = useState(false);
+    const [isFlipped, setIsFlipped] = useState(false);
 
-    // Main flip spring with satisfying physics
-    const [flipSpring, flipApi] = useSpring(() => ({
-      rotateX: 0,
-      rotateY: 0,
-      scale: 1,
-      y: 0,
-      shadow: 10,
-      config: flipConfigs.flip,
-    }));
-
-    // Imperative methods
-    useImperativeHandle(ref, () => ({
-      flipToFront: () => {
-        setFlipped(false);
-        flipApi.start({
-          rotateX: rotate === 'x' ? 0 : 0,
-          rotateY: rotate === 'y' ? 0 : 0,
-          config: flipConfigs.flip,
-        });
+    // Bouncy spring config for satisfying flip
+    const { rotation } = useSpring({
+      rotation: isFlipped ? 180 : 0,
+      config: {
+        tension: 200,
+        friction: 25,
+        mass: 2
       },
-      flipToBack: () => {
-        setFlipped(true);
-        flipApi.start({
-          rotateX: rotate === 'x' ? 180 : 0,
-          rotateY: rotate === 'y' ? 180 : 0,
-          config: flipConfigs.flip,
-        });
-      },
-      toggle: () => {
-        const newFlipped = !flipped;
-        setFlipped(newFlipped);
-        flipApi.start({
-          rotateX: rotate === 'x' ? (newFlipped ? 180 : 0) : 0,
-          rotateY: rotate === 'y' ? (newFlipped ? 180 : 0) : 0,
-          config: flipConfigs.flip,
-        });
-      },
-      isFlipped: () => flipped,
-    }));
-
-    const handleFlip = (shouldFlip: boolean) => {
-      if (trigger === 'hover') {
-        setFlipped(shouldFlip);
-        flipApi.start({
-          rotateX: rotate === 'x' ? (shouldFlip ? 180 : 0) : 0,
-          rotateY: rotate === 'y' ? (shouldFlip ? 180 : 0) : 0,
-          scale: shouldFlip ? 1.02 : 1,
-          y: shouldFlip ? -8 : 0,
-          shadow: shouldFlip ? 25 : 10,
-          config: flipConfigs.flip,
-        });
-      } else {
-        // Just hover lift without flip
-        flipApi.start({
-          y: shouldFlip ? -8 : 0,
-          shadow: shouldFlip ? 25 : 10,
-          config: flipConfigs.hover,
-        });
-      }
-    };
-
-    const handleClick = () => {
-      if (trigger === 'click') {
-        const newFlipped = !flipped;
-        setFlipped(newFlipped);
-        flipApi.start({
-          rotateX: rotate === 'x' ? (newFlipped ? 180 : 0) : 0,
-          rotateY: rotate === 'y' ? (newFlipped ? 180 : 0) : 0,
-          scale: 1,
-          config: flipConfigs.flip,
-        });
-      }
-    };
+    });
 
     // Default back content
     const backContent = back ?? (
@@ -158,68 +62,45 @@ export const FlipCard = forwardRef<FlipCardRef, FlipCardProps>(
     );
 
     return (
-      <animated.div
-        className={cn('h-72 w-56 cursor-pointer', className)}
-        style={{
-          perspective: 1200,
-          transform: flipSpring.y.to(y => `translateY(${y}px)`),
-        }}
-        onMouseEnter={() => handleFlip(true)}
-        onMouseLeave={() => handleFlip(false)}
-        onClick={handleClick}
+      <div
+        ref={ref}
+        className={cn('h-72 w-56 [perspective:1000px]', className)}
+        onMouseEnter={() => setIsFlipped(true)}
+        onMouseLeave={() => setIsFlipped(false)}
       >
         <animated.div
-          className="relative h-full w-full"
+          className="relative h-full w-full rounded-2xl"
           style={{
             transformStyle: 'preserve-3d',
-            transform: to(
-              [flipSpring.rotateX, flipSpring.rotateY, flipSpring.scale],
-              (rx, ry, s) =>
-                rotate === 'x'
-                  ? `rotateX(${rx}deg) scale(${s})`
-                  : `rotateY(${ry}deg) scale(${s})`
+            transform: rotation.to((r) =>
+              rotate === 'y' ? `rotateY(${r}deg)` : `rotateX(${r}deg)`
             ),
           }}
         >
           {/* Front */}
-          <animated.div
+          <div
             className={cn(
-              'absolute inset-0 overflow-hidden rounded-2xl',
-              'border border-zinc-700 bg-zinc-900',
-              'shadow-xl',
+              'absolute size-full overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900',
+              '[backface-visibility:hidden]',
               frontClassName
             )}
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              boxShadow: flipSpring.shadow.to(
-                (s) => `0 ${s}px ${s * 2}px rgba(0,0,0,0.3)`
-              ),
-            }}
           >
             {children}
-          </animated.div>
+          </div>
 
           {/* Back */}
-          <animated.div
+          <div
             className={cn(
-              'absolute inset-0 overflow-hidden rounded-2xl',
-              'border border-zinc-600 bg-zinc-800 p-4 text-zinc-100',
+              'absolute h-full w-full overflow-hidden rounded-2xl border border-zinc-600 bg-zinc-800 p-4 text-zinc-100',
+              '[backface-visibility:hidden]',
+              rotate === 'y' ? '[transform:rotateY(180deg)]' : '[transform:rotateX(180deg)]',
               backClassName
             )}
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: rotate === 'x' ? 'rotateX(180deg)' : 'rotateY(180deg)',
-              boxShadow: flipSpring.shadow.to(
-                (s) => `0 ${s}px ${s * 2}px rgba(0,0,0,0.3)`
-              ),
-            }}
           >
             {backContent}
-          </animated.div>
+          </div>
         </animated.div>
-      </animated.div>
+      </div>
     );
   }
 );

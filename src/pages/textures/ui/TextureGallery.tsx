@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import {
   TexturedBackground,
   AsphaltBackground,
@@ -11,6 +12,105 @@ import {
   type TextureType,
   type ColorScheme,
 } from 'shared/ui/animated/background';
+import {
+  STANDART_DARK,
+  STANDART_LIGHT,
+  oklchToString,
+  type OklchTuple,
+  type GradientConfig,
+  type ThemeConfig,
+} from 'shared/config';
+import { themeStore } from '@/shared';
+
+// ============================================================================
+// Theme Color Viewer
+// ============================================================================
+
+interface ColorSwatchProps {
+  name: string;
+  color: OklchTuple;
+}
+
+function ColorSwatch({ name, color }: ColorSwatchProps) {
+  const cssColor = oklchToString(color);
+  const tupleStr = `[${color[0].toFixed(3)}, ${color[1].toFixed(3)}, ${color[2].toFixed(1)}]`;
+
+  // Determine if we need light or dark text based on lightness
+  const textColor = color[0] > 0.6 ? 'text-black' : 'text-white';
+
+  return (
+    <div
+      className="p-4 rounded-xl flex flex-col gap-1"
+      style={{ backgroundColor: cssColor }}
+    >
+      <span className={`font-bold text-lg ${textColor}`}>{name}</span>
+      <span className={`font-mono text-sm ${textColor} opacity-80`}>{tupleStr}</span>
+    </div>
+  );
+}
+
+function isOklchTuple(value: unknown): value is OklchTuple {
+  return Array.isArray(value) &&
+    value.length === 3 &&
+    typeof value[0] === 'number' &&
+    typeof value[1] === 'number' &&
+    typeof value[2] === 'number';
+}
+
+function isGradientConfig(value: unknown): value is GradientConfig {
+  return Array.isArray(value) &&
+    value.length === 4 &&
+    Array.isArray(value[0]) &&
+    typeof value[1] === 'number';
+}
+
+function isOklchArray(value: unknown): value is OklchTuple[] {
+  return Array.isArray(value) &&
+    value.length > 0 &&
+    Array.isArray(value[0]) &&
+    value[0].length === 3 &&
+    typeof value[0][0] === 'number';
+}
+
+export const ThemeColorViewer = observer(function ThemeColorViewer() {
+  const theme: ThemeConfig = themeStore.isDark ? STANDART_DARK : STANDART_LIGHT;
+  const themeName = themeStore.isDark ? 'STANDART_DARK' : 'STANDART_LIGHT';
+
+  const entries: { name: string; color: OklchTuple }[] = [];
+
+  for (const [key, value] of Object.entries(theme)) {
+    if (key === 'boxShadow') continue; // Skip non-color fields
+
+    if (isOklchTuple(value)) {
+      // Single color
+      entries.push({ name: key, color: value });
+    } else if (isGradientConfig(value)) {
+      // Gradient - extract colors array
+      const [colors] = value;
+      colors.forEach((c, i) => {
+        entries.push({ name: `${key}[${i}]`, color: c });
+      });
+    } else if (isOklchArray(value)) {
+      // Array of colors
+      value.forEach((c, i) => {
+        entries.push({ name: `${key}[${i}]`, color: c });
+      });
+    }
+  }
+
+  return (
+    <div className="p-6 space-y-4">
+      <h2 className="text-2xl font-bold text-white">
+        Theme Colors: <span className="text-purple-400">{themeName}</span>
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        {entries.map(({ name, color }) => (
+          <ColorSwatch key={name} name={name} color={color} />
+        ))}
+      </div>
+    </div>
+  );
+});
 
 // ============================================================================
 // Demo: All Textures Gallery
@@ -33,6 +133,8 @@ const TEXTURE_DEMOS: { texture: TextureType; scheme: ColorScheme; label: string 
 
 export function TextureGallery() {
   return (
+    <div className="space-y-8">
+      <ThemeColorViewer />
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-8">
         {TEXTURE_DEMOS.map(({ texture, scheme, label }) => (
             <TexturedBackground
@@ -54,14 +156,14 @@ export function TextureGallery() {
         {/* Pure CSS variant */}
         <PureNoiseBackground scheme="dark" intensity="strong" className="aspect-video rounded-xl shadow-lg">
           <div className="flex items-center justify-center h-full">
-          <span className="text-white font-medium text-sm drop-shadow-lg">
-            Pure CSS (fastest)
-          </span>
+            <span className="text-white font-medium text-sm drop-shadow-lg">
+              Pure CSS (fastest)
+            </span>
           </div>
         </PureNoiseBackground>
-          <UsageExamples />
+        <UsageExamples />
       </div>
-
+    </div>
   );
 }
 

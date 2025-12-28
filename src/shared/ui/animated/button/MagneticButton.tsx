@@ -57,12 +57,12 @@ export const MagneticButton = forwardRef<MagneticButtonRef, MagneticButtonProps>
     {
       children,
       className,
-      strength = 0.4,
+      strength = 0.01,
       tilt = true,
-      tiltIntensity = 15,
-      hoverScale = 1.08,
+      tiltIntensity = 2,
+      hoverScale = 1.03,
       glow = false,
-      glowColor = 'rgba(59, 130, 246, 0.6)',
+      glowColor = 'rgba(59, 130, 246, 0.3)',
       onMouseMove,
       onMouseEnter,
       onMouseLeave,
@@ -134,8 +134,8 @@ export const MagneticButton = forwardRef<MagneticButtonRef, MagneticButtonProps>
         const clampedY = Math.max(-1, Math.min(1, mouseY));
 
         // Magnetic pull with easing
-        const pullX = clampedX * width * strength * 0.35;
-        const pullY = clampedY * height * strength * 0.35;
+        const pullX = clampedX * width * strength * 0.11;
+        const pullY = clampedY * height * strength * 0.15;
 
         api.start({
           x: pullX,

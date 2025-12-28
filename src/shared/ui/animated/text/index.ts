@@ -1,1 +1,8 @@
-export { AnimatedText, GradientText, FlowingGradientText, type AnimatedTextProps } from './AnimatedText';
+export {
+  AnimatedText,
+  GradientText,
+  FlowingGradientText,
+  ThemedGradientText,
+  type AnimatedTextProps,
+  type AnimatedTextRef,
+} from './AnimatedText';
