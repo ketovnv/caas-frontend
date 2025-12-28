@@ -1,8 +1,9 @@
 import { useRef, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { animated, useSpring } from '@react-spring/web';
+import { animated } from '@react-spring/web';
 import { themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
+import { ToggleController } from './ToggleController';
 
 const DEBOUNCE_MS = 150;
 
@@ -29,30 +30,6 @@ const sizeConfig = {
 // Component
 // ============================================================================
 
-// ============================================================================
-// Animation States
-// ============================================================================
-
-const LIGHT_STATE = {
-  thumb: { x: 1, rotate: 360 }, // x=1 means right side (x * translate)
-  bg: { background: 'linear-gradient(145deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%)' },
-  glow: { boxShadow: '0 0 20px rgba(251, 191, 36, 0.5), inset 0 1px 2px rgba(255,255,255,0.3)' },
-  sun: { opacity: 1, scale: 1, rotate: 0, filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.8))' },
-  moon: { opacity: 0, scale: 0.3, rotate: 180, filter: 'drop-shadow(0 0 0px rgba(148, 163, 184, 0))' },
-  stars: { opacity: 0, scale: 0 },
-  rays: { opacity: 0.8, scale: 1, rotate: 45 },
-};
-
-const DARK_STATE = {
-  thumb: { x: 0, rotate: 0 }, // x=0 means left side
-  bg: { background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #334155 100%)' },
-  glow: { boxShadow: '0 0 15px rgba(100, 116, 139, 0.3), inset 0 1px 2px rgba(0,0,0,0.3)' },
-  sun: { opacity: 0, scale: 0.3, rotate: -180, filter: 'drop-shadow(0 0 0px rgba(251, 191, 36, 0))' },
-  moon: { opacity: 1, scale: 1, rotate: 0, filter: 'drop-shadow(0 0 3px rgba(148, 163, 184, 0.5))' },
-  stars: { opacity: 1, scale: 1 },
-  rays: { opacity: 0, scale: 0.5, rotate: 0 },
-};
-
 export const ThemeToggle = observer(function ThemeToggle({
   className,
   size = 'md',
@@ -60,72 +37,31 @@ export const ThemeToggle = observer(function ThemeToggle({
   const { wrapper, icon, thumb, translate } = sizeConfig[size];
   const lastClickRef = useRef(0);
 
-  // Initial state
+  // ─────────────────────────────────────────────────────────────────────────
+  // Controller (single instance)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const ctrlRef = useRef<ToggleController | null>(null);
+  if (!ctrlRef.current) {
+    ctrlRef.current = new ToggleController(translate);
+  }
+  const ctrl = ctrlRef.current;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // React to theme changes
+  // ─────────────────────────────────────────────────────────────────────────
+
   const isDark = themeStore.themeIsDark;
-  const initial = isDark ? DARK_STATE : LIGHT_STATE;
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Imperative Springs
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const [thumbSpring, thumbApi] = useSpring(() => ({
-    x: initial.thumb.x * translate,
-    rotate: initial.thumb.rotate,
-    config: themeStore.springConfig,
-  }));
-
-  const [bgSpring, bgApi] = useSpring(() => ({
-    ...initial.bg,
-    config: themeStore.springConfig,
-  }));
-
-  const [glowSpring, glowApi] = useSpring(() => ({
-    ...initial.glow,
-    config: themeStore.springConfig,
-  }));
-
-  const [sunSpring, sunApi] = useSpring(() => ({
-    ...initial.sun,
-    config: themeStore.springConfig,
-  }));
-
-  const [moonSpring, moonApi] = useSpring(() => ({
-    ...initial.moon,
-    config: themeStore.springConfig,
-  }));
-
-  const [starsSpring, starsApi] = useSpring(() => ({
-    ...initial.stars,
-    config: themeStore.springConfig,
-  }));
-
-  const [raysSpring, raysApi] = useSpring(() => ({
-    ...initial.rays,
-    config: themeStore.springConfig,
-  }));
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Animate on theme change (via observer re-render)
-  // ─────────────────────────────────────────────────────────────────────────
-
   const prevIsDarkRef = useRef(isDark);
 
   useEffect(() => {
-    // Skip initial render
     if (prevIsDarkRef.current === isDark) return;
     prevIsDarkRef.current = isDark;
+    ctrl.animateTo(isDark);
+  }, [isDark, ctrl]);
 
-    const state = isDark ? DARK_STATE : LIGHT_STATE;
-    const cfg = { config: themeStore.springConfig };
-
-    thumbApi.start({ x: state.thumb.x * translate, rotate: state.thumb.rotate, ...cfg });
-    bgApi.start({ ...state.bg, ...cfg });
-    glowApi.start({ ...state.glow, ...cfg });
-    sunApi.start({ ...state.sun, ...cfg });
-    moonApi.start({ ...state.moon, ...cfg });
-    starsApi.start({ ...state.stars, ...cfg });
-    raysApi.start({ ...state.rays, ...cfg });
-  }, [isDark, translate, thumbApi, bgApi, glowApi, sunApi, moonApi, starsApi, raysApi]);
+  // Cleanup
+  useEffect(() => () => ctrl.stop(), [ctrl]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Click Handler
@@ -135,9 +71,12 @@ export const ThemeToggle = observer(function ThemeToggle({
     const now = Date.now();
     if (now - lastClickRef.current < DEBOUNCE_MS) return;
     lastClickRef.current = now;
-
     themeStore.toggleColorScheme();
   };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <animated.button
@@ -150,16 +89,19 @@ export const ThemeToggle = observer(function ThemeToggle({
         wrapper,
         className
       )}
-      style={{ ...bgSpring, ...glowSpring }}
-      aria-label={themeStore.themeIsDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      style={{
+        background: ctrl.background,
+        boxShadow: ctrl.boxShadow,
+      }}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {/* Stars background (dark mode) */}
       <animated.div
         className="absolute inset-0 pointer-events-none overflow-hidden rounded-full"
-        style={{ opacity: starsSpring.opacity }}
+        style={{ opacity: ctrl.starsOpacity }}
       >
         {[...Array(5)].map((_, i) => (
-          <animated.div
+          <div
             key={i}
             className="absolute rounded-full bg-slate-300"
             style={{
@@ -167,8 +109,6 @@ export const ThemeToggle = observer(function ThemeToggle({
               height: 2 + (i % 2),
               top: `${15 + i * 15}%`,
               left: `${10 + i * 12}%`,
-              scale: starsSpring.scale,
-              animationDelay: `${i * 0.2}s`,
             }}
           />
         ))}
@@ -177,10 +117,7 @@ export const ThemeToggle = observer(function ThemeToggle({
       {/* Sun rays background (light mode) */}
       <animated.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        style={{
-          opacity: raysSpring.opacity,
-          transform: raysSpring.rotate.to(r => `rotate(${r}deg)`),
-        }}
+        style={ctrl.raysStyle}
       >
         {[...Array(8)].map((_, i) => (
           <div
@@ -201,9 +138,7 @@ export const ThemeToggle = observer(function ThemeToggle({
           'flex items-center justify-center',
           thumb
         )}
-        style={{
-          transform: thumbSpring.x.to(x => `translateX(${x}px)`),
-        }}
+        style={{ transform: ctrl.thumbTransform }}
       >
         {/* Sun icon */}
         <animated.svg
@@ -212,15 +147,9 @@ export const ThemeToggle = observer(function ThemeToggle({
           viewBox="0 0 24 24"
           fill="none"
           className="absolute"
-          style={{
-            opacity: sunSpring.opacity,
-            transform: sunSpring.scale.to((s) => `scale(${s})`),
-            filter: sunSpring.filter,
-          }}
+          style={ctrl.sunStyle}
         >
-          {/* Sun center */}
           <circle cx="12" cy="12" r="5" fill="#fbbf24" />
-          {/* Sun rays */}
           <g stroke="#f59e0b" strokeWidth="2" strokeLinecap="round">
             <line x1="12" y1="1" x2="12" y2="4" />
             <line x1="12" y1="20" x2="12" y2="23" />
@@ -240,11 +169,7 @@ export const ThemeToggle = observer(function ThemeToggle({
           viewBox="0 0 24 24"
           fill="none"
           className="absolute"
-          style={{
-            opacity: moonSpring.opacity,
-            transform: moonSpring.scale.to((s) => `scale(${s})`),
-            filter: moonSpring.filter,
-          }}
+          style={ctrl.moonStyle}
         >
           <path
             d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
@@ -252,7 +177,6 @@ export const ThemeToggle = observer(function ThemeToggle({
             stroke="#475569"
             strokeWidth="1"
           />
-          {/* Moon craters */}
           <circle cx="10" cy="9" r="1.5" fill="#475569" opacity="0.4" />
           <circle cx="14" cy="14" r="1" fill="#475569" opacity="0.3" />
           <circle cx="9" cy="14" r="0.8" fill="#475569" opacity="0.3" />
