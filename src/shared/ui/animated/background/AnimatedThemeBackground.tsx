@@ -93,10 +93,10 @@ export const AnimatedThemeBackground = observer(function AnimatedThemeBackground
                 />
             )}
 
-            {/* Content - scrollable when fixed */}
+            {/* Content - flex column layout when fixed */}
             <div className={cn(
                 'relative z-10',
-                fixed && 'h-screen overflow-y-auto overflow-x-hidden'
+                fixed && 'h-dvh flex flex-col overflow-x-hidden'
             )}>
                 {children}
             </div>

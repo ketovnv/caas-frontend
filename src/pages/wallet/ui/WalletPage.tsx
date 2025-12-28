@@ -5,16 +5,22 @@ import { animated } from '@react-spring/web';
 
 export function WalletPage() {
   return (
-    <div className="flex flex-col items-center justify-center flex-1 p-8 min-h-[60vh]">
-      <animated.h1 style={{color: themeStore.goldColor.value}} className="text-5xl font-bold mb-2">Wallet</animated.h1>
+    <div className="flex flex-col items-center justify-center flex-1 p-4 sm:p-8 w-full max-w-2xl mx-auto min-h-0">
+      <animated.h1
+        style={{color: themeStore.goldColor.value}}
+        className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 text-center"
+      >
+        Wallet
+      </animated.h1>
       <AnimatedText
         text="Manage your crypto assets"
         colors={RAINBOWGRADIENT}
+        className="text-sm sm:text-base"
       />
-      <p className="mt-6 text-white/50 text-center max-w-md">
+      <p className="mt-4 sm:mt-6 text-white/50 text-center max-w-md text-sm sm:text-base px-4">
         Connect your wallet to view balances, send and receive crypto
       </p>
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         <LoginButton />
       </div>
     </div>

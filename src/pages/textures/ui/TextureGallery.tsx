@@ -99,11 +99,11 @@ export const ThemeColorViewer = observer(function ThemeColorViewer() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <h2 className="text-2xl font-bold text-white">
+    <div className="p-4 sm:p-6 space-y-4">
+      <h2 className="text-xl sm:text-2xl font-bold text-white">
         Theme Colors: <span className="text-purple-400">{themeName}</span>
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
         {entries.map(({ name, color }) => (
           <ColorSwatch key={name} name={name} color={color} />
         ))}
@@ -133,9 +133,9 @@ const TEXTURE_DEMOS: { texture: TextureType; scheme: ColorScheme; label: string 
 
 export function TextureGallery() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8 w-full">
       <ThemeColorViewer />
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-8">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-8">
         {TEXTURE_DEMOS.map(({ texture, scheme, label }) => (
             <TexturedBackground
                 key={`${texture}-${scheme}`}
@@ -173,7 +173,7 @@ export function TextureGallery() {
 
 export function UsageExamples() {
   return (
-      <div className="space-y-8 p-8">
+      <div className="space-y-6 sm:space-y-8 p-4 sm:p-8">
         {/* Basic usage */}
         <AsphaltBackground className="p-8 rounded-2xl">
           <h2 className="text-white text-2xl font-bold">Default Asphalt</h2>

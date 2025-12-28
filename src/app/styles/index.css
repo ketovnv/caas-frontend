@@ -1,21 +1,64 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   Base Layout - Mobile First
+   ============================================================================ */
 
 html,
 body,
-#root.bg-orange-950,
 #root {
   min-height: 100vh;
-  width: 100vw;
+  min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  width: 100%;
 }
 
+/* Prevent horizontal overflow */
 html {
   overflow-x: hidden;
 }
 
-/* Prevent horizontal scroll from 100vw on scrollbar */
 body {
-  overflow-x: hidden;   
+  overflow-x: hidden;
+  /* Safe area insets for notched devices */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ============================================================================
+   Responsive Typography
+   ============================================================================ */
+
+html {
+  /* Fluid base font: 14px at 320px → 16px at 768px */
+  font-size: clamp(0.875rem, 0.8rem + 0.5vw, 1rem);
+}
+
+/* ============================================================================
+   Touch Improvements
+   ============================================================================ */
+
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets on mobile */
+  button,
+  [role="button"],
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ============================================================================
+   Utility Classes
+   ============================================================================ */
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 

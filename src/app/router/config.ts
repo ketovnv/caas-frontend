@@ -16,20 +16,17 @@ export const routeConfigs: Record<Route, RouteConfig> = {
     title: 'CaaS - Textures',
   },
 
-  // Protected routes
+  // Protected routes (temporarily public for development)
   wallet: {
-    requiresAuth: true,
-    redirectTo: 'home',
+    requiresAuth: false,
     title: 'CaaS - Wallet',
   },
   exchange: {
-    requiresAuth: true,
-    redirectTo: 'home',
+    requiresAuth: false,
     title: 'CaaS - Exchange',
   },
   settings: {
-    requiresAuth: true,
-    redirectTo: 'home',
+    requiresAuth: false,
     title: 'CaaS - Settings',
   },
 

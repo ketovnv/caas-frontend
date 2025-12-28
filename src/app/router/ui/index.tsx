@@ -260,7 +260,7 @@ export const AppRouter = observer(function AppRouter() {
 
   return (
     <div
-      className="relative w-full overflow-hidden"
+      className="relative w-full"
       style={{ perspective: '1200px' }}
     >
       {transitions((style, route) => {

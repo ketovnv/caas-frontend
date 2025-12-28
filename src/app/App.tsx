@@ -37,7 +37,7 @@ export function App() {
                 <AnimatedThemeBackground fixed noise>
                     <NavLinks/>
                     <AuthSync/>
-                    <main className="flex flex-col items-center min-h-screen px-4 py-16 gap-4">
+                    <main className="flex-1 flex flex-col items-center overflow-y-auto px-3 sm:px-4 md:px-6 py-4 sm:py-8 md:py-12 gap-4">
                         <AppRouter/>
                     </main>
                 </AnimatedThemeBackground>

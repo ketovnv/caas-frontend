@@ -206,7 +206,7 @@ export const MagneticButton = forwardRef<MagneticButtonRef, MagneticButtonProps>
         className={cn(
           'relative inline-flex items-center justify-center',
           'px-6 py-3 rounded-xl font-medium',
-          'bg-gradient-to-br from-blue-600 to-purple-600 text-white',
+          'bg-linear-to-br from-blue-600 to-purple-600 text-white',
           'shadow-lg shadow-blue-500/25',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           className

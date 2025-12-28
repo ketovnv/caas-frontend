@@ -102,21 +102,25 @@ export  const ComponentsShowcase = observer(() =>{
     const [showSkeleton, setShowSkeleton] = useState(true);
 
     return (
-        <div className="max-w-6xl mx-auto space-y-12 p-8">
+        <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-12 p-4 sm:p-6 md:p-8">
             {/* Header */}
             <header className="text-center space-y-2">
-                <animated.h1 style={goldStyle} className="text-4xl font-bold">
+                <animated.h1 style={goldStyle} className="text-2xl sm:text-3xl md:text-4xl font-bold">
                     CaaS UI Components
                 </animated.h1>
-                <AnimatedText text="React Spring Imperative Animations + FSD Architecture" colors={[[0.645, 0.129, 101.6],[0.203, 0.141, 264.1]]}/>
+                <AnimatedText
+                    text="React Spring Imperative Animations + FSD Architecture"
+                    colors={[[0.645, 0.129, 101.6],[0.203, 0.141, 264.1]]}
+                    className="text-xs sm:text-sm md:text-base"
+                />
             </header>
             {/* ================================================================ */}
             {/* Buttons Section */}
             {/* ================================================================ */}
             <section className="space-y-4">
-                <animated.h2 style={goldStyle} className="text-2xl font-semibold">Buttons</animated.h2>
+                <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Buttons</animated.h2>
 
-                <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex flex-wrap gap-2 sm:gap-4 items-center justify-center sm:justify-start">
                     <ShimmerButton
                         shimmerColor="#ffffff"
                         shimmerDuration={2.5}
@@ -153,11 +157,11 @@ export  const ComponentsShowcase = observer(() =>{
             {/* ================================================================ */}
             {/* Cards Section */}
             {/* ================================================================ */}
-            <section className="space-y-6">
-                <animated.h2 style={goldStyle} className="text-2xl font-semibold">Cards</animated.h2>
+            <section className="space-y-4 sm:space-y-6">
+                <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Cards</animated.h2>
 
                 {/* Row 1: Basic cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* 3D Tilt Card */}
                     <Card
                         variant="glass"
@@ -217,7 +221,7 @@ export  const ComponentsShowcase = observer(() =>{
                 </div>
 
                 {/* Row 2: Advanced cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* Glare Card */}
                     <GlareCard className="p-6 h-64">
                         <div className="flex flex-col justify-between h-full">
@@ -279,7 +283,7 @@ export  const ComponentsShowcase = observer(() =>{
                 </div>
 
                 {/* Row 3: More wobble variants */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <WobbleCard variant="pink" className="p-8">
                         <div className="flex items-center gap-6">
                             <span className="text-5xl">🎨</span>
@@ -311,9 +315,9 @@ export  const ComponentsShowcase = observer(() =>{
             {/* Inputs Section */}
             {/* ================================================================ */}
             <section className="space-y-4">
-                <animated.h2 style={goldStyle} className="text-2xl font-semibold">Inputs</animated.h2>
+                <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Inputs</animated.h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl">
                     <SpotlightInput
                         placeholder="Spotlight input..."
                         spotlightColor="rgba(139, 92, 246, 0.5)"
@@ -337,10 +341,10 @@ export  const ComponentsShowcase = observer(() =>{
             {/* Counter Section */}
             {/* ================================================================ */}
             <section className="space-y-4">
-                <animated.h2 style={goldStyle} className="text-2xl font-semibold">Animated Counter</animated.h2>
+                <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Animated Counter</animated.h2>
 
-                <div className="flex items-center gap-6">
-                    <div className="text-4xl font-bold text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                         <AnimatedCounter
                             ref={counterRef}
                             value={balance}
@@ -379,8 +383,8 @@ export  const ComponentsShowcase = observer(() =>{
             {/* Animated List Section */}
             {/* ================================================================ */}
             <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <animated.h2 style={goldStyle} className="text-2xl font-semibold">Animated List</animated.h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Animated List</animated.h2>
                     <div className="flex gap-2">
                         <RippleButton
                             variant="ghost"
@@ -429,7 +433,7 @@ export  const ComponentsShowcase = observer(() =>{
             {/* Tabs Section */}
             {/* ================================================================ */}
             <section className="space-y-4">
-                <animated.h2 style={goldStyle} className="text-2xl font-semibold">Animated Tabs</animated.h2>
+                <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Animated Tabs</animated.h2>
 
                 <Card variant="elevated" className="overflow-hidden">
                     <AnimatedTabs
@@ -446,8 +450,8 @@ export  const ComponentsShowcase = observer(() =>{
             {/* Skeleton Section */}
             {/* ================================================================ */}
             <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <animated.h2 style={goldStyle} className="text-2xl font-semibold">Skeleton Loading</animated.h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Skeleton Loading</animated.h2>
                     <RippleButton
                         variant="ghost"
                         onClick={() => setShowSkeleton((s) => !s)}
@@ -457,7 +461,7 @@ export  const ComponentsShowcase = observer(() =>{
                 </div>
 
                 {showSkeleton && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <SkeletonCard shimmerSpeed={1200}/>
 
                         <div className="space-y-4 p-4 bg-zinc-900 rounded-xl">
@@ -482,9 +486,9 @@ export  const ComponentsShowcase = observer(() =>{
             {/* Theme Toggle Section */}
             {/* ================================================================ */}
             <section className="space-y-4">
-                <animated.h2 style={goldStyle} className="text-2xl font-semibold">Theme Toggle</animated.h2>
+                <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Theme Toggle</animated.h2>
 
-                <div className="flex items-center gap-8">
+                <div className="flex flex-wrap items-center gap-4 sm:gap-8">
                     <div className="flex flex-col items-center gap-2">
                         <ThemeToggle size="sm"/>
                         <span className="text-zinc-400 text-sm">Small</span>
