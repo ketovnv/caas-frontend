@@ -1,18 +1,18 @@
 import {useEffect} from 'react';
-import {Web3AuthProvider, useWeb3Auth} from '@web3auth/modal/react';
 import {observer} from 'mobx-react-lite';
 import {} from './router';
-import {web3AuthContextConfig} from 'features/auth';
+import {authStore} from 'features/auth';
 import {DefaultErrorFallback, ErrorBoundary} from 'features/error';
 import {router, AppRouter} from 'app/router';
 import {AnimatedThemeBackground} from "shared/ui/animated/background";
 import {NavLinks} from "widgets/nav-links";
+import {GlobalHeader} from "widgets/global-header";
 import {logger} from "shared/lib";
 
 
-// Syncs Web3Auth state → router.isAuthenticated
+// Syncs AuthStore state → router.isAuthenticated
 const AuthSync = observer(function AuthSync() {
-    const {isConnected} = useWeb3Auth();
+    const {isConnected} = authStore;
 
     useEffect(() => {
         router.setAuthenticated(isConnected);
@@ -33,15 +33,14 @@ export function App() {
                 console.error('Error in App:', error, errorInfo);
             }}
         >
-            <Web3AuthProvider config={web3AuthContextConfig}>
-                <AnimatedThemeBackground fixed noise>
-                    <NavLinks/>
-                    <AuthSync/>
-                    <main className="flex-1 flex flex-col items-center overflow-y-auto px-3 sm:px-4 md:px-6 py-4 sm:py-8 md:py-12 gap-4">
-                        <AppRouter/>
-                    </main>
-                </AnimatedThemeBackground>
-            </Web3AuthProvider>
+            <AnimatedThemeBackground fixed noise>
+                <NavLinks/>
+                <AuthSync/>
+                <GlobalHeader/>
+                <main className="flex-1 flex flex-col items-center overflow-y-auto scrollbar-hide px-3 sm:px-4 md:px-6 pb-24 gap-4">
+                    <AppRouter/>
+                </main>
+            </AnimatedThemeBackground>
         </ErrorBoundary>
     );
 }

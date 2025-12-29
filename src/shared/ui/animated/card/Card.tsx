@@ -32,7 +32,7 @@ const variantStyles: Record<CardVariant, string> = {
   default: 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800',
   elevated: 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xl',
   glass: 'bg-white/10 dark:bg-black/10 backdrop-blur-md border border-white/20',
-  gradient: 'bg-gradient-to-br from-purple-500 to-pink-500 text-white',
+  gradient: 'bg-gradient-to-br from-slate-600 to-cyan-600 text-white',
   neon: 'bg-black border-2 border-cyan-500 text-cyan-400',
 };
 
@@ -185,7 +185,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
             <div
               className={cn(
                 'absolute inset-0',
-                variant === 'gradient' && 'bg-gradient-to-br from-purple-500 to-pink-500',
+                variant === 'gradient' && 'bg-gradient-to-br from-slate-600 to-cyan-600',
                 variant === 'neon' && 'bg-cyan-500',
                 variant !== 'gradient' && variant !== 'neon' && 'bg-blue-500'
               )}

@@ -14,6 +14,7 @@ export {GlareCard, type GlareCardProps, type GlareCardRef} from './glare-card';
 export {WobbleCard, type WobbleCardProps, type WobbleCardRef} from './wobble-card';
 
 export {AnimatedText, GradientText, FlowingGradientText, type AnimatedTextProps} from './text'
+export {MorphingText, type MorphingTextProps} from './morphing-text'
 
 
 // Button Components
@@ -26,7 +27,8 @@ export {RainbowButton, type RainbowButtonProps} from './button';
 
 // Input Components
 
-export {AnimatedInput, type AnimatedInputProps} from './input';
+export {AnimatedInput, type AnimatedInputProps, type AnimatedInputRef, AnimatedInputController} from './input';
+// Legacy (deprecated - use AnimatedInput)
 export {SpotlightInput, type SpotlightInputProps} from './input';
 export {VanishInput, type VanishInputProps, type VanishInputRef} from './input';
 
@@ -65,3 +67,10 @@ export {
 // Theme Toggle
 
 export {ThemeToggle, type ThemeToggleProps} from './theme-toggle';
+
+
+// Glow Effects
+
+export {GlowBorder, type GlowBorderProps} from './glow';
+export {GlowingEffect, type GlowingEffectProps} from './glow';
+export {GlowingEffectCard, type GlowingEffectCardProps} from './glow';

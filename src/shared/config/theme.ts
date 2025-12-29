@@ -21,6 +21,9 @@ export interface ThemeConfig {
   color: OklchTuple;
   accentColor: OklchTuple;
   goldColor: OklchTuple;
+  grayColor: OklchTuple;
+  greenColor: OklchTuple;
+  redColor: OklchTuple;
 
   // Gradients (4 colors + position + steps)
   backgroundGradient: GradientConfig;
@@ -43,26 +46,30 @@ export interface ThemeConfig {
 
 export const STANDART_DARK: ThemeConfig = {
   color: [0.991, 0.001, 0],              // oklch(0.991 0.001 0) - near white
-  accentColor: [0.59, 0.222, 263.9],     // oklch(0.59 0.222 263.9) - purple accent
+  accentColor: [0.652, 0.313, 264.05],   // oklch(0.652 0.313 264.05) - vibrant purple
   goldColor: [0.945, 0.129, 101.6],      // oklch(0.945 0.129 101.6) - gold
+  grayColor : [0.275, 0.001, 99.1],      // oklch(0.275 0.001 99.1)
+  greenColor : [0.765, 0.177, 165],      // oklch(0.765 0.177 163.223)
+  redColor : [0.651, 0.237, 25.3],      // oklch(0.651 0.237 25.3) 
   boxShadow: '2px 1px rgba(0, 150, 150, 0.05)',
 
   backgroundGradient: [
     [
-      [0.01, 0.111, 200],    // oklch(0.01 0.111 200) - deep blue-black
-      [0.1, 0.05, 200],      // oklch(0.1 0.05 200) - dark blue
-      [0.01, 0.011, 0],      // oklch(0.01 0.011 0) - near black
-      [0.2, 0.013, 264],     // oklch(0.2 0.013 264) - dark purple
+      [0.01, 0.111, 200],    // oklch(0.01 0.111 200) 
+      [0.1, 0.05, 200],      // oklch(0.051 0.05 200) 
+      [0.01, 0.011, 0],      // oklch(0.01 0.011 0) 
+      [0.2, 0.013, 264],     // oklch(0.2 0.013 264) 
     ],
     -30, -15, 16  // x%, y%, steps (for CSS, not spread)
   ],
 
+  
   buttonGradient: [
     [
-      [0.121, 0.001, 235],      // oklch(0.121 0.001 235) - dark blue-gray
+      [0.772, 0.231, 235.58],   // oklch(0.2845 0.0423 261.22) - bright cyangray
       [0.001, 0.001, 0],        // oklch(0.001 0.001 0) - black
-      [0.001, 0.001, 0],        // oklch(0.001 0.001 0) - black
-      [0.139, 0.019, 259.66],   // oklch(0.139 0.019 259.66) - dark purple
+      [0.613, 0.208, 263.91],   // oklch(oklch(0.4575 0.0588 244.26)) 
+      [0.452, 0.235, 235.05],   // oklch(0.208 0.022 260.49) - blue
     ],
     100, 50, 8
   ],
@@ -77,17 +84,18 @@ export const STANDART_DARK: ThemeConfig = {
   buttonActiveTextColors: [
     [0.968, 0.211, 109.77],   // oklch(0.968 0.211 109.77) - bright yellow
     [0.978, 0.124, 108.51],   // oklch(0.978 0.124 108.51) - yellow
-    [0.845, 0.001, 0],        // oklch(0.845 0.001 0) - light gray
+    [0.845, 0.001, 0.01],        // oklch(0.845 0.001 0.01) - light gray
     [0.991, 0.044, 107.18],   // oklch(0.991 0.044 107.18) - pale yellow
   ],
 
-  navBarButtonBackground: [0.652, 0.313, 264.05],   // oklch(0.652 0.313 264.05) - vibrant purple
+  
+  navBarButtonBackground: [0.61, 0.165, 264.2],     // oklch(oklch(0.61 0.165 264.2)
 
   navBarButtonTextColors: [
-    [0.772, 0.231, 235.58],   // oklch(0.772 0.231 235.58) - bright cyan
-    [0.613, 0.208, 263.91],   // oklch(0.613 0.208 263.91) - purple
-    [0.938, 0.295, 195.64],   // oklch(0.938 0.295 195.64) - bright cyan
-    [0.452, 0.235, 235.05],   // oklch(0.452 0.235 235.05) - blue
+    [0.772, 0.231, 235.58],   // oklch(0.2845 0.0423 261.22) - bright cyan
+    [0.613, 0.208, 263.91],   // oklch(oklch(0.4575 0.0588 244.26)) - purple
+    [0.938, 0.295, 195.64],   // oklch(0.538 0.95 195.64) - bright cyan
+    [0.452, 0.235, 235.05],   // oklch(0.208 0.022 260.49) - blue
   ],
 
   navBarButtonActiveTextColors: [
@@ -102,8 +110,11 @@ export const STANDART_DARK: ThemeConfig = {
 
 export const STANDART_LIGHT: ThemeConfig = {
   color: [0.001, 0.001, 0],              // oklch(0.001 0.001 0) - black
-  accentColor: [0.421, 0.208, 263.91],   // oklch(0.421 0.208 263.91) - dark purple
-  goldColor: [0.645, 0.129, 101.6],      // oklch(0.645 0.129 101.6) - dark gold
+  accentColor: [0.252, 0.313, 264.05],   // oklch(0.252 0.313 264.05) - dark vibrant purple
+  goldColor: [0.645, 0.129, 101.6],      // oklch(0.645 0.129 101.6) 
+  grayColor : [0.275, 0.001, 99.1],      // oklch(0.275 0.001 99.1) 
+  greenColor : [0.365, 0.177, 165],      // oklch(0.365 0.177 163.223) 
+  redColor : [0.351, 0.237, 25.3],      // oklch(0.351 0.237 25.3) 
   boxShadow: '2px 1px rgba(0, 0, 0, 0.15)',
 
   backgroundGradient: [
@@ -140,7 +151,8 @@ export const STANDART_LIGHT: ThemeConfig = {
     [0.627, 0.135, 70.15],    // oklch(0.627 0.135 70.15) - yellow-orange
   ],
 
-  navBarButtonBackground: [0.252, 0.313, 264.05],   // oklch(0.252 0.313 264.05) - dark vibrant purple
+  
+  navBarButtonBackground: [0.35, 0.165, 264.2],     // oklch(oklch(0.35 0.165 264.2)  
 
   navBarButtonTextColors: [
     [0.272, 0.231, 235.58],   // oklch(0.272 0.231 235.58) - dark cyan-blue

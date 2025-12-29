@@ -9,14 +9,16 @@ import {
     FlipCard,
     GlareCard,
     WobbleCard,
+    // Glow Effects
+    GlowBorder,
+    GlowingEffectCard,
     // Buttons
     ShimmerButton,
     MagneticButton,
     RippleButton,
     RainbowButton,
     // Inputs
-    SpotlightInput,
-    VanishInput,
+    AnimatedInput,
     // Counter
     AnimatedCounter,
     // List
@@ -33,7 +35,7 @@ import {
     type AnimatedListRef,
     type AnimatedTabsRef,
     type MagneticButtonRef,
-    type VanishInputRef,
+    type AnimatedInputRef,
     type Tab, AnimatedText,
 } from 'shared/ui'
 import {animated} from '@react-spring/web'
@@ -94,7 +96,7 @@ export  const ComponentsShowcase = observer(() =>{
     const listRef = useRef<AnimatedListRef>(null);
     const tabsRef = useRef<AnimatedTabsRef>(null);
     const magneticRef = useRef<MagneticButtonRef>(null);
-    const vanishRef = useRef<VanishInputRef>(null);
+    const inputRef = useRef<AnimatedInputRef>(null);
     const goldStyle= themeStore.goldStyle
 
     // State
@@ -102,32 +104,27 @@ export  const ComponentsShowcase = observer(() =>{
     const [showSkeleton, setShowSkeleton] = useState(true);
 
     return (
-        <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-12 p-4 sm:p-6 md:p-8">
+        <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-12">
             {/* Header */}
-            <header className="text-center space-y-2">
-                <animated.h1 style={goldStyle} className="text-2xl sm:text-3xl md:text-4xl font-bold">
-                    CaaS UI Components
-                </animated.h1>
-                <AnimatedText
-                    text="React Spring Imperative Animations + FSD Architecture"
-                    colors={[[0.645, 0.129, 101.6],[0.203, 0.141, 264.1]]}
-                    className="text-xs sm:text-sm md:text-base"
-                />
-            </header>
+            {/*<header className="text-center space-y-2">*/}
+            {/*    <AnimatedText*/}
+            {/*        text="React Spring Imperative Animations + FSD Architecture"*/}
+            {/*        colors={[[0.65, 0.12, 220], [0.55, 0.10, 200]]}*/}
+            {/*        className="text-xs sm:text-sm md:text-base"*/}
+            {/*    />*/}
+            {/*</header>*/}
             {/* ================================================================ */}
             {/* Buttons Section */}
             {/* ================================================================ */}
             <section className="space-y-4">
                 <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Buttons</animated.h2>
-
                 <div className="flex flex-wrap gap-2 sm:gap-4 items-center justify-center sm:justify-start">
                     <ShimmerButton
                         shimmerColor="#ffffff"
                         shimmerDuration={2.5}
                         shimmerSpread={90}
                         shimmerSize="0.15em"
-                        shimmerBlur={10}
-                        background="rgba(0, 0, 0, 0.95)"
+                        shimmerBlur={4}
                     >
                         Shimmer Button
                     </ShimmerButton>
@@ -171,35 +168,33 @@ export  const ComponentsShowcase = observer(() =>{
                         className="p-6"
                     >
                         <CardHeader className="p-0 pb-4">
-                            <CardTitle>3D Tilt Card</CardTitle>
-                            <CardDescription>With glow + magnetic effect</CardDescription>
+                            <CardTitle>Glass Tilt</CardTitle>
+                            <CardDescription>3D tilt + glow on hover</CardDescription>
                         </CardHeader>
                         <CardContent className="p-0">
                             <p className="text-zinc-300">
-                                Move your cursor over this card to see the 3D tilt and glow effects.
+                                Move cursor to see the 3D tilt and glow effects.
                             </p>
                         </CardContent>
                     </Card>
 
-                    {/* Gradient Card */}
-                    <Card
-                        variant="gradient"
-                        hover
-                        morphing
-                        className="p-6"
+                    {/* Glow Border Card */}
+                    <GlowBorder
+                        colors={['#0ea5e9', '#06b6d4', '#14b8a6']}
+                        borderWidth={2}
+                        duration={3}
                     >
-                        <CardHeader className="p-0 pb-4">
-                            <CardTitle>Gradient Card</CardTitle>
-                            <CardDescription className="text-white/70">
-                                Morphing border radius
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <p className="text-white/90">
-                                Watch the border radius morph on hover!
+                        <div className="bg-zinc-900 p-6 rounded-xl h-full">
+                            <h3 className="text-xl font-bold text-white mb-2">Glow Border</h3>
+                            <p className="text-zinc-400 text-sm mb-4">
+                                Animated gradient border effect
                             </p>
-                        </CardContent>
-                    </Card>
+                            <div className="flex gap-2">
+                                <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 text-xs">animated</span>
+                                <span className="px-2 py-1 rounded bg-teal-500/20 text-teal-400 text-xs">css mask</span>
+                            </div>
+                        </div>
+                    </GlowBorder>
 
                     {/* Flip Card */}
                     <FlipCard
@@ -207,60 +202,51 @@ export  const ComponentsShowcase = observer(() =>{
                         back={
                             <div className="flex flex-col items-center justify-center h-full">
                                 <span className="text-4xl mb-2">✨</span>
-                                <h3 className="text-lg font-bold text-white">Card Details</h3>
+                                <h3 className="text-lg font-bold text-white">Back Side</h3>
                                 <p className="text-zinc-400 text-sm mt-2">Move away to flip back</p>
                             </div>
                         }
                     >
-                        <div
-                            className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-blue-600 to-purple-600 p-6">
+                        <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-slate-600 to-cyan-700 p-6">
                             <span className="text-4xl mb-2">💳</span>
-                            <h3 className="text-xl font-bold text-white">Hover to Flip!</h3>
+                            <h3 className="text-xl font-bold text-white">Flip Card</h3>
+                            <p className="text-white/70 text-sm mt-1">Hover to flip</p>
                         </div>
                     </FlipCard>
                 </div>
 
                 {/* Row 2: Advanced cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    {/* Glowing Effect Card */}
+                    <GlowingEffectCard className="h-64">
+                        <div>
+                            <h3 className="text-xl font-bold text-white mb-2">Glowing Effect</h3>
+                            <p className="text-zinc-400 text-sm">
+                                Metallic gradient follows your cursor
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-pink-400 animate-pulse"/>
+                            <span className="text-zinc-500 text-xs">Move cursor nearby</span>
+                        </div>
+                    </GlowingEffectCard>
+
                     {/* Glare Card */}
-                    <GlareCard className="p-6 h-64">
+                    <GlareCard
+                        className="p-6 h-64"
+                        borderColors={['#0ea5e9', '#06b6d4', '#14b8a6']}
+                        glareColor="rgba(14, 165, 233, 0.3)"
+                    >
                         <div className="flex flex-col justify-between h-full">
                             <div>
                                 <h3 className="text-xl font-bold text-white mb-2">Glare Card</h3>
                                 <p className="text-zinc-400 text-sm">
-                                    Linear-style glare effect that follows your cursor
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"/>
-                                <span className="text-zinc-300 text-sm">Hover me!</span>
-                            </div>
-                        </div>
-                    </GlareCard>
-
-                    {/* Glare Card with custom colors */}
-                    <GlareCard
-                        className="p-6 h-64"
-                        borderColors={['#f59e0b', '#ef4444', '#ec4899']}
-                        glareColor="rgba(251, 191, 36, 0.3)"
-                    >
-                        <div className="flex flex-col justify-between h-full">
-                            <div>
-                                <h3 className="text-xl font-bold text-white mb-2">Custom Glare</h3>
-                                <p className="text-zinc-400 text-sm">
-                                    With custom border and glare colors
+                                    Glare highlight follows your cursor
                                 </p>
                             </div>
                             <div className="flex gap-2">
-                  <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs">
-                    amber
-                  </span>
-                                <span className="px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-xs">
-                    red
-                  </span>
-                                <span className="px-3 py-1 rounded-full bg-pink-500/20 text-pink-400 text-xs">
-                    pink
-                  </span>
+                                <span className="px-2 py-1 rounded bg-sky-500/20 text-sky-400 text-xs">spotlight</span>
+                                <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 text-xs">border</span>
                             </div>
                         </div>
                     </GlareCard>
@@ -271,7 +257,7 @@ export  const ComponentsShowcase = observer(() =>{
                             <div>
                                 <h3 className="text-xl font-bold text-white mb-2">Wobble Card</h3>
                                 <p className="text-white/70 text-sm">
-                                    Follows cursor with a soft wobble effect
+                                    Subtle 3D tilt following cursor
                                 </p>
                             </div>
                             <div className="flex items-center justify-between">
@@ -282,31 +268,43 @@ export  const ComponentsShowcase = observer(() =>{
                     </WobbleCard>
                 </div>
 
-                {/* Row 3: More wobble variants */}
+                {/* Row 3: Glow Border variations */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <WobbleCard variant="pink" className="p-8">
-                        <div className="flex items-center gap-6">
-                            <span className="text-5xl">🎨</span>
-                            <div>
-                                <h3 className="text-xl font-bold text-white mb-1">Pink Wobble</h3>
-                                <p className="text-white/70 text-sm">
-                                    Perfect for creative and playful sections
-                                </p>
+                    <GlowBorder
+                        colors={['#f59e0b', '#eab308', '#84cc16']}
+                        borderWidth={2}
+                        duration={5}
+                    >
+                        <div className="bg-zinc-900 p-8 rounded-xl">
+                            <div className="flex items-center gap-6">
+                                <span className="text-5xl">☀️</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white mb-1">Warm Glow</h3>
+                                    <p className="text-zinc-400 text-sm">
+                                        Amber-yellow-lime gradient border
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </WobbleCard>
+                    </GlowBorder>
 
-                    <WobbleCard variant="blue" className="p-8">
-                        <div className="flex items-center gap-6">
-                            <span className="text-5xl">🚀</span>
-                            <div>
-                                <h3 className="text-xl font-bold text-white mb-1">Blue Wobble</h3>
-                                <p className="text-white/70 text-sm">
-                                    Great for technology and professional content
-                                </p>
+                    <GlowBorder
+                        colors={['#8b5cf6', '#6366f1', '#3b82f6']}
+                        borderWidth={3}
+                        duration={4}
+                    >
+                        <div className="bg-zinc-900 p-8 rounded-xl">
+                            <div className="flex items-center gap-6">
+                                <span className="text-5xl">🌌</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white mb-1">Cosmic Glow</h3>
+                                    <p className="text-zinc-400 text-sm">
+                                        Violet-indigo-blue gradient border
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </WobbleCard>
+                    </GlowBorder>
                 </div>
             </section>
 
@@ -317,21 +315,16 @@ export  const ComponentsShowcase = observer(() =>{
             <section className="space-y-4">
                 <animated.h2 style={goldStyle} className="text-xl sm:text-2xl font-semibold">Inputs</animated.h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl">
-                    <SpotlightInput
-                        placeholder="Spotlight input..."
-                        spotlightColor="rgba(139, 92, 246, 0.5)"
-                        spotlightRadius={150}
-                        pulse
-                    />
-
-                    <VanishInput
-                        ref={vanishRef}
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 max-w-xl">
+                    <AnimatedInput
+                        ref={inputRef}
                         placeholders={[
                             'Type and press Enter...',
                             'Your text will vanish!',
-                            'Particle effect demo',
+                            'Spotlight + Particle effect',
                         ]}
+                        spotlightColor="rgba(14, 165, 233, 0.5)"
+                        spotlightRadius={150}
                         onSubmit={(value) => console.log('Submitted:', value)}
                     />
                 </div>

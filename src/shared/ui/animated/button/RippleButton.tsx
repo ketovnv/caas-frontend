@@ -96,7 +96,7 @@ export const RippleButton = forwardRef<HTMLButtonElement, RippleButtonProps>(
       default: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25',
       outline: 'border-2 border-blue-500 text-blue-500 hover:bg-blue-500/10',
       ghost: 'text-blue-500 hover:bg-blue-500/10',
-      gradient: 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-lg',
+      gradient: 'bg-gradient-to-r from-slate-600 via-cyan-600 to-teal-600 text-white shadow-lg',
     };
 
     return (

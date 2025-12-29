@@ -1,5 +1,5 @@
 import { TronWeb } from 'tronweb';
-import type { IProvider } from '@web3auth/modal';
+import type { IProvider } from '@web3auth/no-modal';
 
 const TRON_RPC_URL = 'https://api.shasta.trongrid.io';
 

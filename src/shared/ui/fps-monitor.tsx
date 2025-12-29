@@ -11,7 +11,7 @@ export const FPSMonitor = observer(() => {
         config: {
             tension: 200,
             friction: 25,
-            mass: 1,
+            mass: 2,
         },
     });
 
@@ -31,7 +31,7 @@ export const FPSMonitor = observer(() => {
                 display: 'inline-block',
                 whiteSpace: 'nowrap',
                 top: 65,
-                left: 25,
+                right: 25,
                 zIndex: 9999,
                 background: "oklch(0.5 0.013 264.05 /.1)",
                 borderRadius: "8px",

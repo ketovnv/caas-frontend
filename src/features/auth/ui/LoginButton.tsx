@@ -1,26 +1,29 @@
-import { useWeb3Auth, useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser } from '@web3auth/modal/react';
+import { observer } from 'mobx-react-lite';
 import { useState, useEffect } from 'react';
-import { getTronAccount, getTronBalance } from '@/features/auth';
-import {ShimmerButton} from "shared/ui";
+import { authStore } from '../model/auth.store';
+import { LoginOptions } from './LoginOptions';
+import { RippleButton } from 'shared/ui';
+import { web3AuthService } from '@/shared/lib/web3auth';
+import { getTronAccount, getTronBalance } from '../lib/tronRpc';
 
-export function LoginButton() {
-  const { isConnected, provider } = useWeb3Auth();
-  const { userInfo } = useWeb3AuthUser();
-  const { connect } = useWeb3AuthConnect();
-  const { disconnect } = useWeb3AuthDisconnect();
+// ============================================================================
+// Login Button Component
+// ============================================================================
+
+export const LoginButton = observer(function LoginButton() {
+  const { isConnected, profileImage, displayName, email, status } = authStore;
 
   const [tronAddress, setTronAddress] = useState<string>('');
   const [balance, setBalance] = useState<string>('');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchAccountInfo = async () => {
-      if (isConnected && provider) {
+      if (isConnected && web3AuthService.provider) {
         try {
-          const address = await getTronAccount(provider);
+          const address = await getTronAccount(web3AuthService.provider);
           setTronAddress(address);
 
-          const bal = await getTronBalance(provider);
+          const bal = await getTronBalance(web3AuthService.provider);
           setBalance(bal);
         } catch (error) {
           console.error('Error fetching account info:', error);
@@ -29,84 +32,77 @@ export function LoginButton() {
     };
 
     fetchAccountInfo();
-  }, [isConnected, provider]);
-
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      await connect();
-    } catch (error) {
-      console.error('Login error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isConnected]);
 
   const handleLogout = async () => {
-    setLoading(true);
-    try {
-      await disconnect();
-      setTronAddress('');
-      setBalance('');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setLoading(false);
-    }
+    await authStore.disconnect();
+    setTronAddress('');
+    setBalance('');
   };
 
+  // Loading state during initialization
+  if (status === 'initializing') {
+    return (
+      <div className="flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+          </svg>
+          <span>Initializing...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Connected state - show profile
   if (isConnected) {
     return (
-      <div className="flex flex-col items-center gap-4 p-6 bg-gray-800 rounded-xl max-w-md w-full">
+      <div className="flex flex-col items-center gap-4 p-6  backdrop-blur-sm border  rounded-2xl max-w-md w-full">
         <div className="flex items-center gap-3">
-          {userInfo?.profileImage && (
+          {profileImage && (
             <img
-              src={userInfo.profileImage}
+              src={profileImage}
               alt="Profile"
-              className="w-12 h-12 rounded-full"
+              className="w-12 h-12 rounded-full ring-2 ring-zinc-700"
             />
           )}
           <div className="text-left">
             <p className="text-white font-medium">
-              {userInfo?.name || userInfo?.email || 'Connected'}
+              {displayName}
             </p>
-            {userInfo?.email && userInfo?.name && (
-              <p className="text-gray-400 text-sm">{userInfo.email}</p>
+            {email && displayName !== email && (
+              <p className="text-zinc-400 text-sm">{email}</p>
             )}
           </div>
         </div>
 
         {tronAddress && (
-          <div className="w-full bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-xs mb-1">TRON Address</p>
+          <div className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4">
+            <p className="text-zinc-400 text-xs mb-1">TRON Address</p>
             <p className="text-white text-sm font-mono break-all">{tronAddress}</p>
           </div>
         )}
 
         {balance && (
-          <div className="w-full bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-xs mb-1">Balance</p>
+          <div className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4">
+            <p className="text-zinc-400 text-xs mb-1">Balance</p>
             <p className="text-white text-lg font-semibold">{balance} TRX</p>
           </div>
         )}
 
-        <button
+        <RippleButton
           onClick={handleLogout}
-          disabled={loading}
-          className="w-full py-3 px-6 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+          disabled={status === 'disconnecting'}
+          variant="outline"
+          className="w-full"
         >
-          {loading ? 'Disconnecting...' : 'Disconnect'}
-        </button>
+          {status === 'disconnecting' ? 'Disconnecting...' : 'Disconnect'}
+        </RippleButton>
       </div>
     );
   }
 
-  return (
-    <ShimmerButton
-      onClick={handleLogin}
-      disabled={loading}
-    >
-      {loading ? 'Connecting...' : 'Connect Wallet'}
-    </ShimmerButton>
-  );
-}
+  // Not connected - show login options
+  return <LoginOptions />;
+});

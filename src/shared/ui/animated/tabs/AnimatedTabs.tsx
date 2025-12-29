@@ -1,18 +1,9 @@
-import {
-  useState,
-  useCallback,
-  useRef,
-  forwardRef,
-  useImperativeHandle,
-  type ReactNode,
-} from 'react';
-import {
-  useTransition,
-  useSpringValue,
-  animated,
-  config,
-} from '@react-spring/web';
+import { useRef, useEffect, forwardRef, useImperativeHandle, type ReactNode } from 'react';
+import { observer } from 'mobx-react-lite';
+import { useTransition, animated, config } from '@react-spring/web';
 import { cn } from 'shared/lib';
+import { TabIndicatorController } from './TabIndicatorController';
+import {themeStore} from "@/shared";
 
 // ============================================================================
 // Types
@@ -58,6 +49,8 @@ export interface AnimatedTabsRef {
   next: () => void;
   /** Go to previous tab */
   prev: () => void;
+  /** Access to controller */
+  controller: TabIndicatorController;
 }
 
 // ============================================================================
@@ -99,188 +92,183 @@ const transitions: Record<TransitionType, {
 };
 
 // ============================================================================
-// Component - Imperative useTransition + useSpringValue
+// Component
 // ============================================================================
 
-export const AnimatedTabs = forwardRef<AnimatedTabsRef, AnimatedTabsProps>(
-  (
-    {
-      tabs,
-      defaultTab,
-      activeTab: controlledTab,
-      onTabChange,
-      transition = 'slide',
-      tabListClass,
-      tabClass,
-      activeTabClass,
-      contentClass,
-      className,
-    },
-    ref
-  ) => {
-    const [internalTab, setInternalTab] = useState(defaultTab || tabs[0]?.id || '');
-    const activeId = controlledTab ?? internalTab;
-    const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-
-    // 🎯 Imperative indicator position
-    const indicatorX = useSpringValue(0, { config: config.stiff });
-    const indicatorWidth = useSpringValue(0, { config: config.stiff });
-
-    // 🎨 Content transition with useTransition
-    const transitionConfig = transitions[transition];
-    const contentTransition = useTransition(activeId, {
-      from: { x: 0, scale: 1, rotateY: 0, ...transitionConfig.from },
-      enter: { x: 0, scale: 1, rotateY: 0, ...transitionConfig.enter },
-      leave: { x: 0, scale: 1, rotateY: 0, ...transitionConfig.leave },
-      config: { ...config.gentle, duration: 200 },
-      exitBeforeEnter: true,
-    });
-
-    // 🎯 Update indicator position imperatively
-    const updateIndicator = useCallback((tabId: string) => {
-      const button = tabRefs.current.get(tabId);
-      if (!button) return;
-
-      const container = button.parentElement;
-      if (!container) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const buttonRect = button.getBoundingClientRect();
-
-      indicatorX.start(buttonRect.left - containerRect.left);
-      indicatorWidth.start(buttonRect.width);
-    }, [indicatorX, indicatorWidth]);
-
-    // 🔄 Switch tab handler
-    const switchTo = useCallback(
-      (tabId: string) => {
-        const tab = tabs.find((t) => t.id === tabId);
-        if (!tab || tab.disabled) return;
-
-        if (!controlledTab) {
-          setInternalTab(tabId);
-        }
-        onTabChange?.(tabId);
-        updateIndicator(tabId);
+export const AnimatedTabs = observer(
+  forwardRef<AnimatedTabsRef, AnimatedTabsProps>(
+    (
+      {
+        tabs,
+        defaultTab,
+        activeTab: controlledTab,
+        onTabChange,
+        transition = 'slide',
+        tabListClass,
+        tabClass,
+        activeTabClass,
+        contentClass,
+        className,
       },
-      [tabs, controlledTab, onTabChange, updateIndicator]
-    );
+      ref
+    ) => {
+      // ─────────────────────────────────────────────────────────────────────────
+      // Controller (single instance)
+      // ─────────────────────────────────────────────────────────────────────────
 
-    // ➡️ Next tab
-    const next = useCallback(() => {
-      const currentIndex = tabs.findIndex((t) => t.id === activeId);
-      const nextIndex = (currentIndex + 1) % tabs.length;
-      const nextTab = tabs[nextIndex];
-      if (nextTab && !nextTab.disabled) {
-        switchTo(nextTab.id);
+      const ctrlRef = useRef<TabIndicatorController | null>(null);
+      if (!ctrlRef.current) {
+        ctrlRef.current = new TabIndicatorController(
+          tabs.map(t => ({ id: t.id, disabled: t.disabled })),
+          defaultTab
+        );
       }
-    }, [tabs, activeId, switchTo]);
+      const ctrl = ctrlRef.current;
 
-    // ⬅️ Previous tab
-    const prev = useCallback(() => {
-      const currentIndex = tabs.findIndex((t) => t.id === activeId);
-      const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-      const prevTab = tabs[prevIndex];
-      if (prevTab && !prevTab.disabled) {
-        switchTo(prevTab.id);
-      }
-    }, [tabs, activeId, switchTo]);
+      // Sync controlled tab
+      const activeId = controlledTab ?? ctrl.activeTabId;
 
-    // 🎭 Expose imperative methods
-    useImperativeHandle(ref, () => ({
-      switchTo,
-      getCurrentTab: () => activeId,
-      next,
-      prev,
-    }));
+      // Update tabs when they change
+      useEffect(() => {
+        ctrl.setTabs(tabs.map(t => ({ id: t.id, disabled: t.disabled })));
+      }, [tabs, ctrl]);
 
-    // Initialize indicator on mount
-    const initRef = useCallback(
-      (node: HTMLButtonElement | null, tabId: string) => {
-        if (node) {
-          tabRefs.current.set(tabId, node);
-          if (tabId === activeId) {
-            // Delay to ensure layout is ready
-            requestAnimationFrame(() => updateIndicator(tabId));
+      // Sync controlled activeTab
+      useEffect(() => {
+        if (controlledTab && controlledTab !== ctrl.activeTabId) {
+          ctrl.switchTo(controlledTab);
+        }
+      }, [controlledTab, ctrl]);
+
+      // Cleanup
+      useEffect(() => () => ctrl.dispose(), [ctrl]);
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // Content transition (useTransition is allowed)
+      // ─────────────────────────────────────────────────────────────────────────
+
+      const transitionConfig = transitions[transition];
+      const contentTransition = useTransition(activeId, {
+        from: { x: 0, scale: 1, rotateY: 0, ...transitionConfig.from },
+        enter: { x: 0, scale: 1, rotateY: 0, ...transitionConfig.enter },
+        leave: { x: 0, scale: 1, rotateY: 0, ...transitionConfig.leave },
+        config: { ...config.gentle, duration: 200 },
+        exitBeforeEnter: true,
+      });
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // Navigation handlers
+      // ─────────────────────────────────────────────────────────────────────────
+
+      const handleTabClick = (tabId: string) => {
+        if (ctrl.switchTo(tabId)) {
+          onTabChange?.(tabId);
+        }
+      };
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // Imperative Handle
+      // ─────────────────────────────────────────────────────────────────────────
+
+      useImperativeHandle(ref, () => ({
+        switchTo: (tabId: string) => {
+          if (ctrl.switchTo(tabId)) {
+            onTabChange?.(tabId);
           }
-        }
-      },
-      [activeId, updateIndicator]
-    );
+        },
+        getCurrentTab: () => ctrl.activeTabId,
+        next: () => {
+          if (ctrl.next()) {
+            onTabChange?.(ctrl.activeTabId);
+          }
+        },
+        prev: () => {
+          if (ctrl.prev()) {
+            onTabChange?.(ctrl.activeTabId);
+          }
+        },
+        controller: ctrl,
+      }));
 
-    return (
-      <div className={cn('w-full', className)}>
-        {/* Tab list */}
-        <div
-          className={cn(
-            'relative flex border-b border-zinc-800',
-            tabListClass
-          )}
-          role="tablist"
-        >
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              ref={(node) => initRef(node, tab.id)}
-              role="tab"
-              aria-selected={activeId === tab.id}
-              aria-disabled={tab.disabled}
-              disabled={tab.disabled}
-              onClick={() => switchTo(tab.id)}
-              className={cn(
-                'relative px-4 py-3 text-sm font-medium transition-colors',
-                'text-zinc-400 hover:text-zinc-200',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                activeId === tab.id && 'text-white',
-                tabClass,
-                activeId === tab.id && activeTabClass
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+      // ─────────────────────────────────────────────────────────────────────────
+      // Render
+      // ─────────────────────────────────────────────────────────────────────────
 
-          {/* Animated indicator */}
-          <animated.div
-            className="absolute bottom-0 h-0.5 bg-blue-500 rounded-full"
-            style={{
-              left: indicatorX,
-              width: indicatorWidth,
-            }}
-          />
-        </div>
-
-        {/* Tab content with transition */}
-        <div className={cn('relative overflow-hidden', contentClass)}>
-          {contentTransition((style, item) => {
-            const tab = tabs.find((t) => t.id === item);
-            if (!tab) return null;
-
-            return (
-              <animated.div
-                role="tabpanel"
-                aria-labelledby={tab.id}
-                className="w-full"
-                style={{
-                  opacity: style.opacity,
-                  transform:
-                    style.x != null
-                      ? style.x.to((x) => `translateX(${x}px)`)
-                      : style.scale != null
-                        ? style.scale.to((s) => `scale(${s})`)
-                        : style.rotateY != null
-                          ? style.rotateY.to((r) => `perspective(600px) rotateY(${r}deg)`)
-                          : undefined,
-                }}
+      return (
+        <div className={cn('w-full', className)}>
+          {/* Tab list */}
+          <div
+            ref={(el) => ctrl.setContainer(el)}
+            className={cn(
+              'relative flex',
+              tabListClass
+            )}
+            role="tablist"
+          >
+            {tabs.map((tab) => (
+              <animated.button
+                key={tab.id}
+                ref={(el) => ctrl.registerTab(tab.id, el)}
+                role="tab"
+                aria-selected={activeId === tab.id}
+                aria-disabled={tab.disabled}
+                disabled={tab.disabled}
+                onClick={() => handleTabClick(tab.id)}
+                style={activeId === tab.id ?themeStore.goldStyle: themeStore.colorStyle}
+                className={cn(
+                  'cursor-pointer relative px-4 py-3 text-sm font-medium transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  tabClass,
+                  activeId === tab.id && activeTabClass
+                )}
               >
-                {tab.content}
-              </animated.div>
-            );
-          })}
+                {tab.label}
+              </animated.button>
+            ))}
+
+            {/* Animated indicator */}
+            <animated.div
+              className="absolute bottom-1 h-0.75 rounded-full"
+              style={{
+                ...themeStore.navBackgroundStyle,
+                left: ctrl.x,
+                width: ctrl.width,
+              }}
+            />
+          </div>
+
+          {/* Tab content with transition */}
+          <div className={cn('relative overflow-hidden', contentClass)}>
+            {contentTransition((style, item) => {
+              const tab = tabs.find((t) => t.id === item);
+              if (!tab) return null;
+
+              return (
+                <animated.div
+                  role="tabpanel"
+                  aria-labelledby={tab.id}
+                  className="w-full"
+                  style={{
+                    opacity: style.opacity,
+                    transform:
+                      style.x != null
+                        ? style.x.to((x) => `translateX(${x}px)`)
+                        : style.scale != null
+                          ? style.scale.to((s) => `scale(${s})`)
+                          : style.rotateY != null
+                            ? style.rotateY.to((r) => `perspective(600px) rotateY(${r}deg)`)
+                            : undefined,
+                  }}
+                >
+                  {tab.content}
+                </animated.div>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
+  )
 );
 
 AnimatedTabs.displayName = 'AnimatedTabs';

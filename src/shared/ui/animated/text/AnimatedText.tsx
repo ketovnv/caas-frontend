@@ -1,28 +1,19 @@
-import {
-  useTrail,
-  useSpringRef,
-  animated,
-  config,
-  type SpringValue,
-  type Interpolation,
-} from '@react-spring/web';
-import {
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  forwardRef,
-  useImperativeHandle,
-} from 'react';
+import { useTrail, animated, config } from '@react-spring/web';
+import { useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { observer } from 'mobx-react-lite';
 import { reaction } from 'mobx';
 import { cn } from 'shared/lib';
+import { themeStore, type OklchTuple, type SpringConfig } from '@/shared';
+import { AnimatedTextController } from './AnimatedTextController';
 import {
-  RAINBOWGRADIENT,
-  type OklchTuple,
-  type SpringConfig,
-  DynamicColorArraySpring,
-  themeStore,
-} from '@/shared';
+  CHAR_HIDDEN,
+  DEFAULT_DURATION,
+  DEFAULT_STAGGER_DELAY,
+  DEFAULT_GRADIENT_SPEED,
+  DEFAULT_GRADIENT_ANGLE,
+  injectGradientFlowStyle,
+  type CharState,
+} from './animated-text.config';
 
 // ============================================================================
 // Types
@@ -55,7 +46,7 @@ export interface AnimatedTextProps {
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'span' | 'div';
   /** Callback when animation completes */
   onAnimationComplete?: () => void;
-  /** Spring config for color animations (defaults to themeStore.springConfig) */
+  /** Spring config for color animations */
   colorSpringConfig?: SpringConfig;
 }
 
@@ -70,289 +61,214 @@ export interface AnimatedTextRef {
   replay: () => Promise<void>;
   /** Animate colors to new values */
   animateColors: (colors: OklchTuple[]) => Promise<void>;
+  /** Access to controller */
+  controller: AnimatedTextController;
 }
 
 // ============================================================================
-// Spring Values Type
+// Component
 // ============================================================================
 
-interface CharSpringValues {
-  opacity: number;
-  y: number;
-  scale: number;
-  blur: number;
-}
-
-type CharAnimatedValues = {
-  [K in keyof CharSpringValues]: SpringValue<CharSpringValues[K]>;
-};
-
-// ============================================================================
-// Default Colors
-// ============================================================================
-
-const defaultColors: OklchTuple[] = RAINBOWGRADIENT;
-
-const HIDDEN: CharSpringValues = { opacity: 0, y: 8, scale: 0.95, blur: 8 };
-const VISIBLE: CharSpringValues = { opacity: 1, y: 0, scale: 1, blur: 0 };
-
-// ============================================================================
-// Gradient Flow Animation (injected once)
-// ============================================================================
-
-const GRADIENT_FLOW_KEYFRAMES = `
-@keyframes gradientFlow {
-  0% { background-position: var(--start-pos) 0%; }
-  100% { background-position: var(--end-pos) 0%; }
-}
-`;
-
-let styleInjected = false;
-function injectGradientFlowStyle() {
-  if (styleInjected || typeof document === 'undefined') return;
-  const style = document.createElement('style');
-  style.textContent = GRADIENT_FLOW_KEYFRAMES;
-  document.head.appendChild(style);
-  styleInjected = true;
-}
-
-// ============================================================================
-// Component - Imperative useTrail with Theme Support
-// ============================================================================
-
-function AnimatedTextInner(
-  {
-    text,
-    colors,
-    lightColors,
-    darkColors,
-    duration = 400,
-    staggerDelay = 30,
-    replayInterval = 0,
-    gradientSpeed = 5,
-    gradientAngle = 75,
-    autoStart = true,
-    className,
-    as: Tag = 'div',
-    onAnimationComplete,
-    colorSpringConfig,
-  }: AnimatedTextProps,
-  ref: React.ForwardedRef<AnimatedTextRef>
-) {
-  const chars = useMemo(() => text.split(''), [text]);
-  const hasAnimated = useRef(false);
-  const isMounted = useRef(true);
-
-  // Inject gradient flow keyframes once
-  useEffect(() => {
-    if (gradientSpeed > 0) {
-      injectGradientFlowStyle();
-    }
-  }, [gradientSpeed]);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Determine color mode and initial colors
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const isThemed = !!(lightColors && darkColors);
-  const initialColors = useMemo(() => {
-    if (isThemed) {
-      return themeStore.isDark ? darkColors! : lightColors!;
-    }
-    return colors ?? defaultColors;
-  }, [isThemed, colors, lightColors, darkColors]);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Color Spring Controller (for animated gradient)
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const colorSpringRef = useRef<DynamicColorArraySpring | null>(null);
-
-  // Initialize color spring once (uses theme's spring config by default)
-  if (!colorSpringRef.current) {
-    colorSpringRef.current = new DynamicColorArraySpring(
-      initialColors,
-      colorSpringConfig ?? themeStore.springConfig
-    );
-  }
-
-  const colorSpring = colorSpringRef.current;
-
-  // Get animated gradient string
-  const gradientColorsInterpolation: Interpolation<string> = useMemo(
-    () => colorSpring.gradientString(gradientAngle),
-    [colorSpring, gradientAngle]
-  );
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Theme Reaction (animate colors on theme change)
-  // ─────────────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!isThemed) return;
-
-    // React to theme changes
-    const dispose = reaction(
-      () => themeStore.isDark,
-      (isDark) => {
-        const targetColors = isDark ? darkColors! : lightColors!;
-        colorSpring.animateTo(targetColors);
-      }
-    );
-
-    return () => dispose();
-  }, [isThemed, lightColors, darkColors, colorSpring]);
-
-  // Update colors when props change (non-themed mode)
-  useEffect(() => {
-    if (isThemed) return;
-    const targetColors = colors ?? defaultColors;
-    colorSpring.animateTo(targetColors);
-  }, [isThemed, colors, colorSpring]);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Imperative Trail API
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const trailRef = useSpringRef();
-
-  const [trail, trailApi] = useTrail<CharSpringValues>(
-    chars.length,
-    () => ({
-      ref: trailRef,
-      from: HIDDEN,
-      to: HIDDEN,
-      config: { ...config.gentle, duration },
-    }),
-    [chars.length, duration]
-  );
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Imperative Methods
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const animateIn = useCallback(async () => {
-    await trailApi.start((i) => ({
-      to: VISIBLE,
-      delay: i * staggerDelay,
-    }));
-    onAnimationComplete?.();
-  }, [trailApi, staggerDelay, onAnimationComplete]);
-
-  const animateOut = useCallback(async () => {
-    await trailApi.start((i) => ({
-      to: HIDDEN,
-      delay: (chars.length - 1 - i) * staggerDelay,
-    }));
-  }, [trailApi, chars.length, staggerDelay]);
-
-  const reset = useCallback(() => {
-    trailApi.set(HIDDEN);
-    hasAnimated.current = false;
-  }, [trailApi]);
-
-  const replay = useCallback(async () => {
-    trailApi.set(HIDDEN);
-    await animateIn();
-  }, [trailApi, animateIn]);
-
-  const animateColors = useCallback(
-    async (newColors: OklchTuple[]) => {
-      await colorSpring.animateTo(newColors);
+const AnimatedTextInner = observer(forwardRef<AnimatedTextRef, AnimatedTextProps>(
+  function AnimatedText(
+    {
+      text,
+      colors,
+      lightColors,
+      darkColors,
+      duration = DEFAULT_DURATION,
+      staggerDelay = DEFAULT_STAGGER_DELAY,
+      replayInterval = 0,
+      gradientSpeed = DEFAULT_GRADIENT_SPEED,
+      gradientAngle = DEFAULT_GRADIENT_ANGLE,
+      autoStart = true,
+      className,
+      as: Tag = 'div',
+      onAnimationComplete,
+      colorSpringConfig,
     },
-    [colorSpring]
-  );
+    ref
+  ) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Controller (single instance)
+    // ─────────────────────────────────────────────────────────────────────────
 
-  // Expose imperative methods
-  useImperativeHandle(ref, () => ({
-    animateIn,
-    animateOut,
-    reset,
-    replay,
-    animateColors,
-  }));
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Auto-start & Replay
-  // ─────────────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (autoStart && !hasAnimated.current && chars.length > 0) {
-      hasAnimated.current = true;
-      animateIn();
+    const ctrlRef = useRef<AnimatedTextController | null>(null);
+    if (!ctrlRef.current) {
+      ctrlRef.current = new AnimatedTextController({
+        text,
+        colors,
+        lightColors,
+        darkColors,
+        staggerDelay,
+        gradientSpeed,
+        gradientAngle,
+        colorSpringConfig,
+      });
     }
-  }, [autoStart, chars.length, animateIn]);
+    const ctrl = ctrlRef.current;
 
-  useEffect(() => {
-    if (replayInterval <= 0) return;
+    // Get chars from controller (observable)
+    const chars = ctrl.chars;
 
-    const intervalId = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        replay();
-      }
-    }, replayInterval);
+    // ─────────────────────────────────────────────────────────────────────────
+    // Inject gradient flow keyframes
+    // ─────────────────────────────────────────────────────────────────────────
 
-    return () => clearInterval(intervalId);
-  }, [replayInterval, replay]);
-
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-      colorSpring.stop();
-    };
-  }, [colorSpring]);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Gradient Styles (using animated interpolation)
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // Animated background gradient
-  const getAnimatedBackground = useCallback(
-    () => {
+    useEffect(() => {
       if (gradientSpeed > 0) {
-        // Flowing gradient - double the colors for seamless loop
-        return gradientColorsInterpolation.to(
-          (colors) =>
-            `linear-gradient(${gradientAngle}deg, ${colors}, ${colors})`
+        injectGradientFlowStyle();
+      }
+    }, [gradientSpeed]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Trail Animation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const [trail, trailApi] = useTrail<CharState>(
+      chars.length,
+      () => ({
+        from: CHAR_HIDDEN,
+        to: CHAR_HIDDEN,
+        config: { ...config.gentle, duration },
+      }),
+      [chars.length, duration]
+    );
+
+    // Connect trail API to controller
+    useEffect(() => {
+      ctrl.setTrailApi(trailApi);
+    }, [ctrl, trailApi]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Text Change Handling - replay animation on text change
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const prevTextRef = useRef(text);
+    const isFirstRender = useRef(true);
+
+    useEffect(() => {
+      // Skip first render (auto-start handles it)
+      if (isFirstRender.current) {
+        isFirstRender.current = false;
+        return;
+      }
+
+      if (text !== prevTextRef.current) {
+        prevTextRef.current = text;
+        // Update controller text and replay animation
+        ctrl.updateText(text);
+        // Small delay to ensure trail is updated with new chars
+        requestAnimationFrame(() => {
+          ctrl.replay().then(() => {
+            onAnimationComplete?.();
+          });
+        });
+      }
+    }, [text, ctrl, onAnimationComplete]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Theme Reaction
+    // ─────────────────────────────────────────────────────────────────────────
+
+    useEffect(() => {
+      if (!ctrl.isThemed) return;
+
+      const dispose = reaction(
+        () => themeStore.isDark,
+        () => ctrl.animateToThemeColors()
+      );
+
+      return () => dispose();
+    }, [ctrl]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Auto-start
+    // ─────────────────────────────────────────────────────────────────────────
+
+    useEffect(() => {
+      if (autoStart && !ctrl.hasAnimated && chars.length > 0) {
+        ctrl.animateIn().then(() => {
+          onAnimationComplete?.();
+        });
+      }
+    }, [autoStart, chars.length, ctrl, onAnimationComplete]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Auto-replay
+    // ─────────────────────────────────────────────────────────────────────────
+
+    useEffect(() => {
+      if (replayInterval <= 0) return;
+
+      const intervalId = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          ctrl.replay();
+        }
+      }, replayInterval);
+
+      return () => clearInterval(intervalId);
+    }, [replayInterval, ctrl]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cleanup
+    // ─────────────────────────────────────────────────────────────────────────
+
+    useEffect(() => {
+      return () => ctrl.dispose();
+    }, [ctrl]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Imperative Handle
+    // ─────────────────────────────────────────────────────────────────────────
+
+    useImperativeHandle(ref, () => ({
+      animateIn: () => ctrl.animateIn(),
+      animateOut: () => ctrl.animateOut(),
+      reset: () => ctrl.reset(),
+      replay: () => ctrl.replay(),
+      animateColors: (newColors) => ctrl.animateColors(newColors),
+      controller: ctrl,
+    }));
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Gradient Background
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const getAnimatedBackground = useMemo(() => {
+      if (gradientSpeed > 0) {
+        return ctrl.gradientString.to(
+          (colorsStr) => `linear-gradient(${gradientAngle}deg, ${colorsStr}, ${colorsStr})`
         );
       }
-
-      // Static gradient
-      return gradientColorsInterpolation.to(
-        (colors) => `linear-gradient(${gradientAngle}deg, ${colors})`
+      return ctrl.gradientString.to(
+        (colorsStr) => `linear-gradient(${gradientAngle}deg, ${colorsStr})`
       );
-    },
-    [gradientSpeed, gradientAngle, gradientColorsInterpolation]
-  );
+    }, [ctrl.gradientString, gradientSpeed, gradientAngle]);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // Render
+    // ─────────────────────────────────────────────────────────────────────────
 
-  return (
-    <Tag className={cn('relative inline-flex', className)}>
-      {trail.map((style: CharAnimatedValues, index: number) => {
-        // Calculate position for this character in the gradient
-        const charPosition = (index / chars.length) * 100;
-        // For animation: shift by one full text width (100%)
-        const startPos = `${charPosition}%`;
-        const endPos = `${charPosition + 100}%`;
+    return (
+      <Tag className={cn('relative inline-flex', className)}>
+        {trail.map((style, index) => {
+          const charPosition = (index / chars.length) * 100;
+          const startPos = `${charPosition}%`;
+          const endPos = `${charPosition + 100}%`;
 
-        return (
-          <animated.span
-            key={index}
-            style={
-              {
+          return (
+            <animated.span
+              key={index}
+              style={{
                 display: 'inline-block',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 color: 'transparent',
-                // Double width for seamless animation loop
                 backgroundSize: `${chars.length * 200}% 100%`,
                 backgroundPosition: gradientSpeed > 0 ? undefined : `${charPosition}% 0%`,
-                backgroundImage: getAnimatedBackground(),
-                // CSS custom properties for animation keyframes
+                backgroundImage: getAnimatedBackground,
                 '--start-pos': startPos,
                 '--end-pos': endPos,
                 animation: gradientSpeed > 0 ? `gradientFlow ${gradientSpeed}s linear infinite` : undefined,
@@ -360,22 +276,22 @@ function AnimatedTextInner(
                 transform: style.y.to((y) => `translateY(${y}px)`),
                 scale: style.scale,
                 filter: style.blur.to((b) => `blur(${b}px)`),
-              } as unknown as React.CSSProperties
-            }
-          >
-            {chars[index] === ' ' ? '\u00A0' : chars[index]}
-          </animated.span>
-        );
-      })}
-    </Tag>
-  );
-}
+              } as unknown as React.CSSProperties}
+            >
+              {chars[index] === ' ' ? '\u00A0' : chars[index]}
+            </animated.span>
+          );
+        })}
+      </Tag>
+    );
+  }
+));
 
 // ============================================================================
 // Exports
 // ============================================================================
 
-export const AnimatedText = forwardRef(AnimatedTextInner);
+export const AnimatedText = AnimatedTextInner;
 AnimatedText.displayName = 'AnimatedText';
 
 // ============================================================================

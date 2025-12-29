@@ -4,10 +4,10 @@ import { FPSMonitor, ThemeToggle, MorphingTabs, type MorphingTab } from 'shared/
 
 const tabs: MorphingTab<Route>[] = [
   { id: 'home', label: 'Home' },
-  { id: 'showcase', label: 'Showcase' },
+  // { id: 'showcase', label: 'Showcase' },
   { id: 'wallet', label: 'Wallet' },
   { id: 'exchange', label: 'Exchange' },
-  { id: 'textures', label: 'Textures' },
+  // { id: 'textures', label: 'Textures' },
   { id: 'settings', label: 'Settings' },
 ];
 
@@ -17,7 +17,7 @@ export const NavLinks = observer(function NavLinks() {
   return (
     <nav className="flex items-center gap-2 sm:gap-4 p-2 sm:p-4">
       {/* Scrollable tabs container */}
-      <div className="flex-1 overflow-x-auto scrollbar-hide -mx-2 px-2">
+      <div className="flex-1 overflow-x-auto scrollbar-hide -mx-2 px-2 justify-content-center bg-color">
         <MorphingTabs
           tabs={tabs}
           activeTab={currentRoute}

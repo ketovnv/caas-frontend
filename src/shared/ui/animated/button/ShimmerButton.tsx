@@ -37,7 +37,7 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
       shimmerSpread = 90,
       shimmerSize = '0.1em',
       borderRadius = '100px',
-      shimmerDuration = 3,
+      shimmerDuration = 5,
       background = 'rgba(0, 0, 0, 1)',
       shimmerBlur = 8,
       disabled,
@@ -51,7 +51,7 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
     const [animSpring, animApi] = useSpring(() => ({
       slide: 0,
       spin: 0,
-      config: { duration: shimmerDuration * 1000 },
+      config: { tension:100, friction:50,mass: shimmerDuration * 10 },
     }));
 
     // Press/hover spring

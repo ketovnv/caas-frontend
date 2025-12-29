@@ -1,6 +1,7 @@
 import { useSpring, animated, config } from '@react-spring/web';
 import { cn } from 'shared/lib';
 import type { ReactNode } from 'react';
+import {themeStore} from "@/shared";
 
 // ============================================================================
 // Types
@@ -58,13 +59,13 @@ function TabButton<T extends string>({
     <animated.button
       onClick={onClick}
       style={{
+        ...themeStore.buttonGradientStyle,
         marginLeft: spring.marginLeft,
         marginRight: spring.marginRight,
       }}
       className={cn(
         'px-4 py-2 rounded-lg cursor-pointer',
-        'bg-zinc-800 text-zinc-100',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
         'group',
         className,
         isActive && activeClassName
@@ -73,13 +74,15 @@ function TabButton<T extends string>({
       {/* Invisible bold text to reserve space */}
       <span className="relative inline-flex justify-center">
         <span className="invisible font-bold">{tab.label}</span>
-        <span className={cn(
+        <animated.span
+            style={themeStore.colorStyle}
+            className={cn(
           'absolute inset-0 flex items-center justify-center',
           'group-hover:font-bold',
           isActive && 'font-bold'
         )}>
           {tab.label}
-        </span>
+        </animated.span>
       </span>
     </animated.button>
   );

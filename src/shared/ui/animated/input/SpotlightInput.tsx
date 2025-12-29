@@ -1,178 +1,150 @@
-import {
-  forwardRef,
-  useRef,
-  useState,
-  useEffect,
-  useCallback,
-  type InputHTMLAttributes,
-} from 'react';
-import { useSpring, useSpringValue, animated, config } from '@react-spring/web';
+import { forwardRef, useRef, useEffect, useImperativeHandle } from 'react';
+import { observer } from 'mobx-react-lite';
+import { animated } from '@react-spring/web';
 import { cn } from 'shared/lib';
+import { SpotlightController } from './SpotlightController';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface SpotlightInputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface SpotlightInputProps {
   /** Container className */
   containerClass?: string;
+  /** Input className */
+  className?: string;
   /** Spotlight color (CSS color) */
   spotlightColor?: string;
   /** Spotlight radius in pixels */
   spotlightRadius?: number;
   /** Enable pulse effect on focus */
   pulse?: boolean;
+  /** Placeholder text */
+  placeholder?: string;
+  /** Disabled state */
+  disabled?: boolean;
+  /** Input type */
+  type?: string;
+  /** OnFocus callback */
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  /** OnBlur callback */
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  /** OnChange callback */
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  /** Value */
+  value?: string;
+  /** Default value */
+  defaultValue?: string;
+}
+
+export interface SpotlightInputRef {
+  focus: () => void;
+  blur: () => void;
+  /** Access to controller for external state management */
+  controller: SpotlightController;
 }
 
 // ============================================================================
-// Component - Imperative React Spring approach
+// Component
 // ============================================================================
 
-export const SpotlightInput = forwardRef<HTMLInputElement, SpotlightInputProps>(
-  (
-    {
-      className,
-      containerClass,
-      spotlightColor = 'rgba(59, 130, 246, 0.5)',
-      spotlightRadius = 120,
-      pulse = true,
-      onFocus,
-      onBlur,
-      ...props
-    },
-    ref
-  ) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [mouse, setMouse] = useState({ x: 0, y: 0 });
-    const [isHovered, setIsHovered] = useState(false);
-    const [isFocused, setIsFocused] = useState(false);
+export const SpotlightInput = observer(
+  forwardRef<SpotlightInputRef, SpotlightInputProps>(
+    (
+      {
+        className,
+        containerClass,
+        spotlightColor = 'rgba(59, 130, 246, 0.5)',
+        spotlightRadius = 120,
+        pulse = true,
+        onFocus,
+        onBlur,
+        ...props
+      },
+      ref
+    ) => {
+      // ─────────────────────────────────────────────────────────────────────────
+      // Controller (single instance)
+      // ─────────────────────────────────────────────────────────────────────────
 
-    // 🎯 Imperative SpringValues for granular control
-    const radius = useSpringValue(0, { config: { tension: 280, friction: 25 } });
-    const opacity = useSpringValue(0, { config: { tension: 280, friction: 25 } });
-    const pulseScale = useSpringValue(1, { config: config.wobbly });
-
-    // 🎨 Border glow spring with imperative API
-    const [borderSpring, borderApi] = useSpring(() => ({
-      borderOpacity: 0,
-      shadowSpread: 0,
-      config: { tension: 300, friction: 20 },
-    }));
-
-    // 🔄 Pulse animation loop (imperative)
-    useEffect(() => {
-      if (!pulse || !isFocused) {
-        pulseScale.start(1);
-        return;
+      const ctrlRef = useRef<SpotlightController | null>(null);
+      if (!ctrlRef.current) {
+        ctrlRef.current = new SpotlightController(spotlightRadius, spotlightColor);
       }
+      const ctrl = ctrlRef.current;
 
-      let active = true;
-      const animate = async () => {
-        while (active && isFocused) {
-          await pulseScale.start(1.02);
-          if (!active) break;
-          await pulseScale.start(0.98);
-        }
+      // Cleanup
+      useEffect(() => () => ctrl.dispose(), [ctrl]);
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // Imperative Handle
+      // ─────────────────────────────────────────────────────────────────────────
+
+      useImperativeHandle(ref, () => ({
+        focus: () => ctrl.focus(),
+        blur: () => ctrl.blur(),
+        controller: ctrl,
+      }));
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // Event Handlers
+      // ─────────────────────────────────────────────────────────────────────────
+
+      const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        ctrl.onMouseMove(e.clientX, e.clientY);
       };
-      animate();
 
-      return () => {
-        active = false;
-      };
-    }, [pulse, isFocused, pulseScale]);
-
-    // 🎯 Spotlight visibility control (imperative)
-    useEffect(() => {
-      if (isHovered) {
-        radius.start(spotlightRadius);
-        opacity.start(1);
-      } else {
-        radius.start(0);
-        opacity.start(0);
-      }
-    }, [isHovered, spotlightRadius, radius, opacity]);
-
-    // ✨ Border glow on focus (imperative)
-    useEffect(() => {
-      if (isFocused) {
-        borderApi.start({
-          borderOpacity: 1,
-          shadowSpread: 8,
-        });
-      } else {
-        borderApi.start({
-          borderOpacity: 0.3,
-          shadowSpread: 0,
-        });
-      }
-    }, [isFocused, borderApi]);
-
-    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-      if (!containerRef.current) return;
-      const { left, top } = containerRef.current.getBoundingClientRect();
-      setMouse({ x: e.clientX - left, y: e.clientY - top });
-    }, []);
-
-    const handleFocus = useCallback(
-      (e: React.FocusEvent<HTMLInputElement>) => {
-        setIsFocused(true);
+      const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        ctrl.onFocus(pulse);
         onFocus?.(e);
-      },
-      [onFocus]
-    );
+      };
 
-    const handleBlur = useCallback(
-      (e: React.FocusEvent<HTMLInputElement>) => {
-        setIsFocused(false);
+      const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+        ctrl.onBlur();
         onBlur?.(e);
-      },
-      [onBlur]
-    );
+      };
 
-    return (
-      <animated.div
-        ref={containerRef}
-        className={cn('group/input relative rounded-lg p-[2px]', containerClass)}
-        style={{
-          background: radius.to(
-            (r) =>
-              `radial-gradient(${r}px circle at ${mouse.x}px ${mouse.y}px, ${spotlightColor}, transparent 80%)`
-          ),
-          transform: pulseScale.to((s) => `scale(${s})`),
-        }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onMouseMove={handleMouseMove}
-      >
-        {/* Focus glow ring */}
+      // ─────────────────────────────────────────────────────────────────────────
+      // Render
+      // ─────────────────────────────────────────────────────────────────────────
+
+      return (
         <animated.div
-          className="absolute inset-0 rounded-lg pointer-events-none"
+          ref={(el) => { ctrl.containerElement = el; }}
+          className={cn('group/input relative rounded-lg p-[2px]', containerClass)}
           style={{
-            boxShadow: borderSpring.shadowSpread.to(
-              (spread) =>
-                `0 0 ${spread}px ${spread / 2}px rgba(59, 130, 246, ${borderSpring.borderOpacity.get() * 0.3})`
-            ),
+            background: ctrl.background,
+            transform: ctrl.transform,
           }}
-        />
+          onMouseEnter={ctrl.onMouseEnter}
+          onMouseLeave={ctrl.onMouseLeave}
+          onMouseMove={handleMouseMove}
+        >
+          {/* Focus glow ring */}
+          <animated.div
+            className="absolute inset-0 rounded-lg pointer-events-none"
+            style={{ boxShadow: ctrl.boxShadow }}
+          />
 
-        <input
-          ref={ref}
-          className={cn(
-            'flex h-11 w-full rounded-md px-3 py-2 text-sm',
-            'border-none bg-zinc-900 text-zinc-100',
-            'placeholder:text-zinc-500',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-            'transition-shadow duration-200',
-            className
-          )}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          {...props}
-        />
-      </animated.div>
-    );
-  }
+          <input
+            ref={(el) => { ctrl.inputElement = el; }}
+            className={cn(
+              'flex h-11 w-full rounded-md px-3 py-2 text-sm',
+              'border-none bg-zinc-900 text-zinc-100',
+              'placeholder:text-zinc-500',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+              'transition-shadow duration-200',
+              className
+            )}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            {...props}
+          />
+        </animated.div>
+      );
+    }
+  )
 );
 
 SpotlightInput.displayName = 'SpotlightInput';

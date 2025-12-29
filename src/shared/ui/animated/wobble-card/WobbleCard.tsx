@@ -15,7 +15,7 @@ const wobbleConfigs = {
 // Types
 // ============================================================================
 
-type WobbleVariant = 'default' | 'pink' | 'blue' | 'purple' | 'gradient';
+type WobbleVariant = 'default' | 'ocean' | 'blue' | 'slate' | 'gradient';
 
 export interface WobbleCardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
@@ -38,10 +38,10 @@ export interface WobbleCardRef {
 
 const variantStyles: Record<WobbleVariant, string> = {
   default: 'bg-zinc-800',
-  pink: 'bg-gradient-to-br from-pink-500 to-rose-600',
-  blue: 'bg-gradient-to-br from-blue-500 to-indigo-600',
-  purple: 'bg-gradient-to-br from-purple-500 to-violet-600',
-  gradient: 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500',
+  ocean: 'bg-gradient-to-br from-cyan-600 to-teal-700',
+  blue: 'bg-gradient-to-br from-blue-500 to-cyan-600',
+  slate: 'bg-gradient-to-br from-slate-600 to-slate-700',
+  gradient: 'bg-gradient-to-br from-slate-600 via-cyan-600 to-teal-600',
 };
 
 // ============================================================================
@@ -54,7 +54,7 @@ export const WobbleCard = forwardRef<WobbleCardRef, WobbleCardProps>(
       children,
       className,
       variant = 'default',
-      intensity = 0.5,
+      intensity = 0.15,
       noise = true,
       ...props
     },
@@ -94,10 +94,10 @@ export const WobbleCard = forwardRef<WobbleCardRef, WobbleCardProps>(
 
         // Wobble effect - card slightly follows cursor with rotation
         api.start({
-          rotateX: -mouseY * intensity * 15,
-          rotateY: mouseX * intensity * 15,
-          translateX: mouseX * intensity * 10,
-          translateY: mouseY * intensity * 10,
+          rotateX: -mouseY * intensity * 8,
+          rotateY: mouseX * intensity * 8,
+          translateX: mouseX * intensity * 4,
+          translateY: mouseY * intensity * 4,
           config: wobbleConfigs.wobble,
         });
       },
@@ -107,7 +107,7 @@ export const WobbleCard = forwardRef<WobbleCardRef, WobbleCardProps>(
     const handleMouseEnter = useCallback(() => {
       updateBounds();
       api.start({
-        scale: 1.02,
+        scale: 1.01,
         config: wobbleConfigs.wobble,
       });
     }, [updateBounds, api]);

@@ -11,7 +11,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     nodePolyfills({
-      include: ['buffer', 'crypto', 'stream', 'util','events', 'string_decoder'],
+      include: ['buffer', 'crypto', 'stream', 'util', 'events', 'string_decoder'],
       globals: {
         Buffer: true,
         global: true,

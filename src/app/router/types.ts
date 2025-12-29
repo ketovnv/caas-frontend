@@ -16,6 +16,10 @@ export interface RouteConfig {
   redirectTo?: Route;
   /** Page title for browser/app */
   title?: string;
+  /** Display title for header (MorphingText) */
+  displayTitle: string;
+  /** Subtitle for header (AnimatedText) */
+  subtitle?: string;
 }
 
 export type TransitionType =

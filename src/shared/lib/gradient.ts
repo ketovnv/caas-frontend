@@ -27,7 +27,7 @@ const shortestHuePath = (from: number, to: number): number => {
   return to;
 };
 
-export const DEFAULT_SPRING_CONFIG: SpringConfig = { tension: 120, friction: 14 };
+export const DEFAULT_SPRING_CONFIG: SpringConfig = { tension: 200, friction: 100, mass:3 };
 
 // ColorSpring — один OKLCH цвет
 
@@ -62,6 +62,15 @@ export class ColorSpring {
 
   set(target: OklchTuple) {
     this.ctrl.set({ l: target[0], c: target[1], h: target[2] });
+  }
+
+  /** Get current OKLCH string value (for non-animated usage) */
+  get currentValue(): string {
+    const springs = this.ctrl.springs;
+    const l = springs.l.get();
+    const c = springs.c.get();
+    const h = normalizeHue(springs.h.get());
+    return `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)})`;
   }
 
   stop() {

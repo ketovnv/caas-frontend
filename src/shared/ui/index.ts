@@ -18,6 +18,8 @@ export {
     GradientText,
     FlowingGradientText,
     type AnimatedTextProps,
+    MorphingText,
+    type MorphingTextProps,
     ShimmerButton,
     type ShimmerButtonProps,
     MagneticButton,
@@ -29,6 +31,9 @@ export {
     type RainbowButtonProps,
     AnimatedInput,
     type AnimatedInputProps,
+    type AnimatedInputRef,
+    AnimatedInputController,
+    // Legacy (deprecated)
     SpotlightInput,
     type SpotlightInputProps,
     VanishInput,
@@ -49,9 +54,20 @@ export {
     type SkeletonProps,
     type SkeletonRef,
     ThemeToggle,
-    type ThemeToggleProps
+    type ThemeToggleProps,
+    GlowBorder,
+    type GlowBorderProps,
+    GlowingEffect,
+    type GlowingEffectProps,
+    GlowingEffectCard,
+    type GlowingEffectCardProps
 } from './animated';
 
 export {
     FPSMonitor
 } from './fps-monitor';
+
+export {
+    PageLayout,
+    type PageLayoutProps
+} from './layout';

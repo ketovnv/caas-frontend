@@ -75,10 +75,13 @@ Import only from public API, never internal paths.
 - Uses Sapphire Devnet
 - Requires `VITE_WEB3AUTH_CLIENT_ID` env variable
 
-### Tron RPC
-- Helper functions in `features/auth/lib/tronRpc.ts`
-- Uses Shasta testnet (`api.shasta.trongrid.io`)
-- Functions: `getTronAccount`, `getTronBalance`, `signMessage`, `sendTransaction`
+### Tron Integration
+- RPC helpers in `features/auth/lib/tronRpc.ts` (Shasta testnet)
+- TronLink wallet adapter in `shared/lib/tronlink/`
+
+### Shared Libraries
+- `shared/lib/haptics/` - Capacitor haptic feedback wrapper
+- `shared/lib/web3auth/` - Web3Auth adapters and config
 
 ## Animated UI Components
 
@@ -92,7 +95,7 @@ Located in `shared/ui/animated/`:
 - **Skeleton** - Loading states
 - **AsphaltBackground** - Animated background effect
 
-React Spring re-exports available in `shared/lib/animated.ts` with aliases: `animated`, `a`, `imp`
+React Spring re-exports and `createControllerAPI()` helper available in `shared/lib/animated.ts`
 
 ## Conventions
 

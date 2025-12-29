@@ -1,5 +1,6 @@
 export { LoginButton } from './ui/LoginButton';
-export { web3AuthContextConfig } from './config/web3auth';
+export { LoginOptions } from './ui/LoginOptions';
+export { authStore } from './model/auth.store';
 export {
   getTronAccount,
   getTronBalance,

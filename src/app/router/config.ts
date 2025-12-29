@@ -6,34 +6,48 @@ export const routeConfigs: Record<Route, RouteConfig> = {
   home: {
     requiresAuth: false,
     title: 'CaaS - Home',
+    displayTitle: 'CaaS Platform',
+    subtitle: 'Crypto as a Service',
   },
   showcase: {
     requiresAuth: false,
     title: 'CaaS - Components',
+    displayTitle: 'Components',
+    subtitle: 'UI Component Library',
   },
   textures: {
     requiresAuth: false,
     title: 'CaaS - Textures',
+    displayTitle: 'Textures',
+    subtitle: 'Visual Effects Gallery',
   },
 
   // Protected routes (temporarily public for development)
   wallet: {
     requiresAuth: false,
     title: 'CaaS - Wallet',
+    displayTitle: 'Wallet',
+    subtitle: 'Manage your crypto assets',
   },
   exchange: {
     requiresAuth: false,
     title: 'CaaS - Exchange',
+    displayTitle: 'Exchange',
+    subtitle: 'Trade & Swap',
   },
   settings: {
     requiresAuth: false,
     title: 'CaaS - Settings',
+    displayTitle: 'Settings',
+    subtitle: 'Customize your experience',
   },
 
   // Fallback
   'not-found': {
     requiresAuth: false,
     title: 'CaaS - Not Found',
+    displayTitle: '404',
+    subtitle: 'Page not found',
   },
 };
 
