@@ -92,7 +92,7 @@ export const STANDART_DARK: ThemeConfig = {
   navBarButtonBackground: [0.61, 0.165, 264.2],     // oklch(oklch(0.61 0.165 264.2)
 
   navBarButtonTextColors: [
-    [0.772, 0.231, 235.58],   // oklch(0.2845 0.0423 261.22) - bright cyan
+    [0.2845 , 0.0423, 261.22],   // oklch(0.2845 0.0423 261.22) - bright cyan
     [0.613, 0.208, 263.91],   // oklch(oklch(0.4575 0.0588 244.26)) - purple
     [0.938, 0.295, 195.64],   // oklch(0.538 0.95 195.64) - bright cyan
     [0.452, 0.235, 235.05],   // oklch(0.208 0.022 260.49) - blue

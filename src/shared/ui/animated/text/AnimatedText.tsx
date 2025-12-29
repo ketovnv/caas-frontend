@@ -3,7 +3,7 @@ import { useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'rea
 import { observer } from 'mobx-react-lite';
 import { reaction } from 'mobx';
 import { cn } from 'shared/lib';
-import { themeStore, type OklchTuple, type SpringConfig } from '@/shared';
+import { themeStore, core, type OklchTuple, type SpringConfig } from '@/shared';
 import { AnimatedTextController } from './AnimatedTextController';
 import {
   CHAR_HIDDEN,
@@ -158,8 +158,8 @@ const AnimatedTextInner = observer(forwardRef<AnimatedTextRef, AnimatedTextProps
         prevTextRef.current = text;
         // Update controller text and replay animation
         ctrl.updateText(text);
-        // Small delay to ensure trail is updated with new chars
-        requestAnimationFrame(() => {
+        // Small delay to ensure trail is updated with new chars (synced with core loop)
+        core.scheduleWrite(() => {
           ctrl.replay().then(() => {
             onAnimationComplete?.();
           });

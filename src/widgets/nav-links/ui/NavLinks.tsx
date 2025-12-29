@@ -15,21 +15,24 @@ export const NavLinks = observer(function NavLinks() {
   const { currentRoute } = router;
 
   return (
-    <nav className="flex items-center gap-2 sm:gap-4 p-2 sm:p-4">
-      {/* Scrollable tabs container */}
-      <div className="flex-1 overflow-x-auto scrollbar-hide -mx-2 px-2 justify-content-center bg-color">
+    <nav className="relative flex items-center p-2 sm:p-4">
+      {/* Left spacer - matches right controls for symmetry */}
+      <div className="w-20 sm:w-24 flex-shrink-0" />
+
+      {/* Center: tabs with padding to prevent clipping */}
+      <div className="flex-1 flex justify-center px-4">
         <MorphingTabs
           tabs={tabs}
           activeTab={currentRoute}
           onTabChange={(route) => router.navigate(route)}
           margin={16}
           blurStdDeviation={6}
-          className="min-w-max"
           tabClassName="text-sm sm:text-base px-3 sm:px-4 py-1.5 sm:py-2"
         />
       </div>
-      {/* Fixed right controls */}
-      <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2">
+
+      {/* Right controls - fixed width */}
+      <div className="w-20 sm:w-24 flex-shrink-0 flex justify-end items-center gap-1 sm:gap-2">
         <ThemeToggle size="sm" />
         <FPSMonitor />
       </div>

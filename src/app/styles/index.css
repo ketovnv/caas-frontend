@@ -48,6 +48,27 @@ html {
 }
 
 /* ============================================================================
+   Disable Browser Swipe Navigation
+   ============================================================================
+   Prevents browser's back/forward swipe gestures (Chrome, Safari, Edge)
+   while preserving normal horizontal scrolling within elements.
+   Our app handles swipe navigation via SwipeController.
+   ============================================================================ */
+
+html,
+body {
+  /* Prevent pull-to-refresh and swipe navigation on the main document */
+  overscroll-behavior-x: none;
+}
+
+/* Allow horizontal scrolling within scrollable containers */
+.overflow-x-auto,
+.overflow-x-scroll,
+[data-allow-swipe="true"] {
+  overscroll-behavior-x: auto;
+}
+
+/* ============================================================================
    Utility Classes
    ============================================================================ */
 

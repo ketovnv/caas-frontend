@@ -1,5 +1,5 @@
 // Router - Public API
-export { router } from 'app/router/model';
+export { router, swipeController, SwipeController } from 'app/router/model';
 export { AppRouter } from 'app/router/ui';
 export {
   routeConfigs,

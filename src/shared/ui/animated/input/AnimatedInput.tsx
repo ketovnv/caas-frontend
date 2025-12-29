@@ -2,6 +2,7 @@ import { forwardRef, useRef, useEffect, useImperativeHandle } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
 import { cn } from 'shared/lib';
+import { themeStore } from 'shared/model';
 import { AnimatedInputController } from './AnimatedInputController';
 
 // ============================================================================
@@ -25,6 +26,8 @@ export interface AnimatedInputProps {
   particleColor?: string;
   /** Show submit button */
   showSubmitButton?: boolean;
+  /** Show focus glow effect (default: false) */
+  showFocusGlow?: boolean;
   /** Placeholder text (single, overrides placeholders array) */
   placeholder?: string;
   /** Disabled state */
@@ -67,6 +70,7 @@ export const AnimatedInput = observer(
         spotlightRadius,
         particleColor,
         showSubmitButton = true,
+        showFocusGlow = false,
         disabled,
         type = 'text',
         step = 1,
@@ -154,33 +158,41 @@ export const AnimatedInput = observer(
 
       return (
         <form onSubmit={handleSubmit} className="w-full">
-          <animated.div
+          <div
             ref={(el) => { ctrl.containerElement = el; }}
             className={cn(
               'group/input relative mx-auto h-12 w-full max-w-xl',
-              'overflow-hidden rounded-full p-[2px]',
               containerClass
             )}
-            style={{
-              background: ctrl.spotlightBackground,
-            }}
             onMouseEnter={ctrl.onMouseEnter}
             onMouseLeave={ctrl.onMouseLeave}
             onMouseMove={handleMouseMove}
           >
-            {/* Focus glow ring */}
+            {/* Animated spotlight border - masked to show only the edge */}
             <animated.div
               className="pointer-events-none absolute inset-0 rounded-full"
-              style={{ boxShadow: ctrl.focusBoxShadow }}
+              style={{
+                background: ctrl.spotlightBackground,
+                mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                maskComposite: 'exclude',
+                WebkitMaskComposite: 'xor',
+                padding: '2px',
+              }}
             />
 
-            {/* Inner container */}
+            {/* Focus glow ring (optional) */}
+            {showFocusGlow && (
+              <animated.div
+                className="pointer-events-none absolute inset-0 rounded-full"
+                style={{ boxShadow: ctrl.focusBoxShadow }}
+              />
+            )}
+
+            {/* Inner container - transparent */}
             <div
               className={cn(
                 'relative h-full w-full rounded-full',
-                'bg-zinc-900 shadow-lg border border-zinc-800',
-                'transition-colors duration-200',
-                ctrl.hasValue && 'bg-zinc-800/80'
+                'bg-transparent'
               )}
             >
               {/* Canvas for particle effect */}
@@ -229,7 +241,7 @@ export const AnimatedInput = observer(
               )}
 
               {/* Input */}
-              <input
+              <animated.input
                 ref={(el) => { ctrl.inputElement = el; }}
                 value={ctrl.value}
                 onChange={handleChange}
@@ -239,25 +251,31 @@ export const AnimatedInput = observer(
                 disabled={disabled || ctrl.animating}
                 type={isNumeric ? 'text' : type}
                 inputMode={isNumeric ? 'decimal' : undefined}
+                style={{
+                  // Only apply color when text should be visible (not during overlay or animation)
+                  color: (isNumeric && ctrl.hasValue && !ctrl.isFocused) || ctrl.animating
+                    ? 'transparent'
+                    : themeStore.colorStyle.color,
+                }}
                 className={cn(
                   'relative z-10 size-full rounded-full border-none',
-                  'bg-transparent text-sm text-zinc-100 sm:text-base',
-                  isNumeric ? 'px-28 text-center caret-zinc-100' : showSubmitButton ? 'pl-4 pr-14 sm:pl-6' : 'px-4 sm:px-6',
-                  'placeholder:text-transparent',
+                  'bg-transparent text-sm font-bold sm:text-base',
+                  isNumeric ? 'px-28 text-center' : showSubmitButton ? 'pl-4 pr-14 sm:pl-6' : 'px-4 sm:px-6',
+                  'placeholder:text-transparent caret-current',
                   'focus:outline-none focus:ring-0',
-                  // Hide input text only when NOT focused (show animated value)
-                  isNumeric && ctrl.hasValue && !ctrl.isFocused && 'text-transparent',
-                  ctrl.animating && 'text-transparent',
                   className
                 )}
               />
 
-              {/* Animated number display for numeric input (only when not focused) */}
-              {isNumeric && ctrl.hasValue && !ctrl.isFocused && (
-                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-sm text-zinc-100 sm:text-base tabular-nums">
+              {/* Animated number display for numeric input (only when not focused and not animating) */}
+              {isNumeric && ctrl.hasValue && !ctrl.isFocused && !ctrl.animating && (
+                <animated.div
+                  className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-sm font-bold sm:text-base"
+                  style={themeStore.colorStyle}
+                >
                   <animated.span>{ctrl.animatedIntegerValue}</animated.span>
                   {ctrl.staticDecimalPart && <span>{ctrl.staticDecimalPart}</span>}
-                </div>
+                </animated.div>
               )}
 
               {/* Submit button */}
@@ -342,11 +360,12 @@ export const AnimatedInput = observer(
               )}>
                 <animated.span
                   className={cn(
-                    'truncate text-sm text-zinc-500 sm:text-base',
+                    'truncate text-sm sm:text-base',
                     isNumeric ? 'text-center' : 'pl-4 sm:pl-6',
                     isNumeric ? 'w-full' : showSubmitButton ? 'w-[calc(100%-4rem)]' : 'w-full'
                   )}
                   style={{
+                    ...themeStore.grayStyle,
                     opacity: ctrl.placeholderOpacity,
                     transform: ctrl.placeholderTransform,
                   }}
@@ -355,7 +374,7 @@ export const AnimatedInput = observer(
                 </animated.span>
               </div>
             </div>
-          </animated.div>
+          </div>
         </form>
       );
     }

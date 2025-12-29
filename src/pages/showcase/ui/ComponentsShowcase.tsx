@@ -36,7 +36,7 @@ import {
     type AnimatedTabsRef,
     type MagneticButtonRef,
     type AnimatedInputRef,
-    type Tab, AnimatedText,
+    type Tab
 } from 'shared/ui'
 import {animated} from '@react-spring/web'
 import {themeStore} from "@/shared";

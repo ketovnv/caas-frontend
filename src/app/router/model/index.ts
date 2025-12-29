@@ -298,3 +298,6 @@ class RouterStore {
 
 // Singleton
 export const router = new RouterStore();
+
+// Re-export SwipeController
+export { swipeController, SwipeController } from './SwipeController';
