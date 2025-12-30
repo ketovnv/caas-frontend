@@ -2,19 +2,21 @@
 // MetaMask Service - Improved Detection
 // ============================================================================
 
-// MetaMask injects window.ethereum
-declare global {
-  interface Window {
-    ethereum?: {
-      isMetaMask?: boolean;
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-      on: (event: string, handler: (...args: unknown[]) => void) => void;
-      removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
-      selectedAddress: string | null;
-      chainId: string | null;
-    };
-  }
-}
+// Use any type for window.ethereum to avoid conflicts with other packages
+// that also declare ethereum on Window (e.g., @reown/appkit)
+type EthereumProvider = {
+  isMetaMask?: boolean;
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  on: (event: string, handler: (...args: unknown[]) => void) => void;
+  removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
+  selectedAddress: string | null;
+  chainId: string | null;
+};
+
+// Helper to get ethereum provider
+const getEthereum = (): EthereumProvider | undefined => {
+  return (window as any).ethereum;
+};
 
 export type MetaMaskState =
   | 'not_installed'
@@ -29,12 +31,12 @@ class MetaMaskService {
   // ─────────────────────────────────────────────────────────
 
   get isInstalled(): boolean {
-    return typeof window !== 'undefined' && !!window.ethereum?.isMetaMask;
+    return typeof window !== 'undefined' && !!getEthereum()?.isMetaMask;
   }
 
   get state(): MetaMaskState {
     if (!this.isInstalled) return 'not_installed';
-    if (!window.ethereum?.selectedAddress) return 'locked';
+    if (!getEthereum()?.selectedAddress) return 'locked';
     return 'connected';
   }
 
@@ -47,13 +49,13 @@ class MetaMaskService {
     if (this.isInstalled) return true;
 
     // Check for any ethereum provider (could be MetaMask or other)
-    if (window.ethereum) return true;
+    if (getEthereum()) return true;
 
     return new Promise((resolve) => {
       const startTime = Date.now();
       
       const checkInterval = setInterval(() => {
-        if (window.ethereum) {
+        if (getEthereum()) {
           clearInterval(checkInterval);
           console.log('[MetaMask] Extension detected');
           resolve(true);
@@ -92,8 +94,9 @@ class MetaMaskService {
       console.log('[MetaMask] Requesting account access...');
       
       // Request account access - this will trigger MetaMask popup
-      const accounts = await window.ethereum!.request({ 
-        method: 'eth_requestAccounts' 
+      const ethereum = getEthereum()!;
+      const accounts = await ethereum.request({
+        method: 'eth_requestAccounts'
       }) as string[];
 
       if (!accounts || accounts.length === 0) {
@@ -122,19 +125,20 @@ class MetaMaskService {
   // ─────────────────────────────────────────────────────────
 
   get address(): string | null {
-    return window.ethereum?.selectedAddress || null;
+    return getEthereum()?.selectedAddress || null;
   }
 
   get chainId(): string | null {
-    return window.ethereum?.chainId || null;
+    return getEthereum()?.chainId || null;
   }
 
   async getBalance(address?: string): Promise<string | null> {
     const targetAddress = address || this.address;
-    if (!targetAddress || !window.ethereum) return null;
+    const ethereum = getEthereum();
+    if (!targetAddress || !ethereum) return null;
 
     try {
-      const balance = await window.ethereum.request({
+      const balance = await ethereum.request({
         method: 'eth_getBalance',
         params: [targetAddress, 'latest']
       }) as string;
@@ -149,10 +153,11 @@ class MetaMaskService {
   }
 
   async getAccounts(): Promise<string[]> {
-    if (!window.ethereum) return [];
-    
+    const ethereum = getEthereum();
+    if (!ethereum) return [];
+
     try {
-      const accounts = await window.ethereum.request({
+      const accounts = await ethereum.request({
         method: 'eth_accounts'
       }) as string[];
       return accounts || [];
@@ -166,16 +171,17 @@ class MetaMaskService {
   // ─────────────────────────────────────────────────────────
 
   async signMessage(message: string): Promise<string> {
-    if (!window.ethereum || !this.address) {
+    const ethereum = getEthereum();
+    if (!ethereum || !this.address) {
       throw new Error('MetaMask not connected');
     }
 
     try {
-      const signature = await window.ethereum.request({
+      const signature = await ethereum.request({
         method: 'personal_sign',
         params: [message, this.address]
       }) as string;
-      
+
       return signature;
     } catch (error) {
       console.error('[MetaMask] signMessage failed:', error);
@@ -188,12 +194,13 @@ class MetaMaskService {
   // ─────────────────────────────────────────────────────────
 
   async switchChain(chainId: string): Promise<void> {
-    if (!window.ethereum) {
+    const ethereum = getEthereum();
+    if (!ethereum) {
       throw new Error('MetaMask not available');
     }
 
     try {
-      await window.ethereum.request({
+      await ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId }]
       });
@@ -211,34 +218,37 @@ class MetaMaskService {
   // ─────────────────────────────────────────────────────────
 
   onAccountsChanged(handler: (accounts: string[]) => void): () => void {
-    if (!window.ethereum) return () => {};
-    
+    const ethereum = getEthereum();
+    if (!ethereum) return () => {};
+
     const wrappedHandler = (accounts: unknown) => handler(accounts as string[]);
-    window.ethereum.on('accountsChanged', wrappedHandler);
-    
+    ethereum.on('accountsChanged', wrappedHandler);
+
     return () => {
-      window.ethereum?.removeListener('accountsChanged', wrappedHandler);
+      getEthereum()?.removeListener('accountsChanged', wrappedHandler);
     };
   }
 
   onChainChanged(handler: (chainId: string) => void): () => void {
-    if (!window.ethereum) return () => {};
-    
+    const ethereum = getEthereum();
+    if (!ethereum) return () => {};
+
     const wrappedHandler = (chainId: unknown) => handler(chainId as string);
-    window.ethereum.on('chainChanged', wrappedHandler);
-    
+    ethereum.on('chainChanged', wrappedHandler);
+
     return () => {
-      window.ethereum?.removeListener('chainChanged', wrappedHandler);
+      getEthereum()?.removeListener('chainChanged', wrappedHandler);
     };
   }
 
   onDisconnect(handler: () => void): () => void {
-    if (!window.ethereum) return () => {};
-    
-    window.ethereum.on('disconnect', handler);
-    
+    const ethereum = getEthereum();
+    if (!ethereum) return () => {};
+
+    ethereum.on('disconnect', handler);
+
     return () => {
-      window.ethereum?.removeListener('disconnect', handler);
+      getEthereum()?.removeListener('disconnect', handler);
     };
   }
 

@@ -30,6 +30,7 @@ class Web3AuthService {
   private instance: Web3AuthNoModal | null = null;
   private _isInitialized = false;
   private _initPromise: Promise<Web3AuthNoModal> | null = null;
+  private _isConnecting = false;
 
   // ─────────────────────────────────────────────────────────
   // Initialization
@@ -97,6 +98,12 @@ class Web3AuthService {
     provider: LoginProvider,
     options?: { email?: string; phone?: string }
   ): Promise<IProvider | null> {
+    // Guard against multiple simultaneous connections
+    if (this._isConnecting) {
+      console.warn('[Web3Auth] Already connecting, ignoring duplicate call');
+      return null;
+    }
+
     if (!this.instance) {
       await this.init();
     }
@@ -132,12 +139,30 @@ class Web3AuthService {
 
     console.log('[Web3Auth] Connecting with:', { provider, authConnectionId });
 
-    const web3authProvider = await this.instance.connectTo(
-      WALLET_CONNECTORS.AUTH,
-      loginParams
-    );
+    // If already connected with valid provider, return it
+    if (this.instance.connected && this.instance.provider) {
+      // Verify connection is actually valid by checking provider
+      try {
+        await this.instance.getUserInfo();
+        console.log('[Web3Auth] Already connected, returning existing provider');
+        return this.instance.provider;
+      } catch {
+        // Stale session - need to logout first
+        console.log('[Web3Auth] Stale session detected, logging out first');
+        await this.instance.logout().catch(() => {});
+      }
+    }
 
-    return web3authProvider;
+    this._isConnecting = true;
+    try {
+      const web3authProvider = await this.instance.connectTo(
+        WALLET_CONNECTORS.AUTH,
+        loginParams
+      );
+      return web3authProvider;
+    } finally {
+      this._isConnecting = false;
+    }
   }
 
   /**
@@ -158,19 +183,28 @@ class Web3AuthService {
 
   /**
    * Get private key (for TRON)
+   * Web3Auth v10 uses eth_private_key method
    */
   async getPrivateKey(): Promise<string | null> {
     if (!this.provider) return null;
 
-    try {
-      const privateKey = await this.provider.request({
-        method: 'private_key',
-      });
-      return privateKey as string;
-    } catch (error) {
-      console.warn('[Web3Auth] getPrivateKey failed:', error);
-      return null;
+    // Try different method names (varies by Web3Auth version/adapter)
+    const methods = ['eth_private_key', 'private_key', 'solana_private_key'];
+
+    for (const method of methods) {
+      try {
+        const privateKey = await this.provider.request({ method });
+        if (privateKey) {
+          console.log('[Web3Auth] Got private key via:', method);
+          return privateKey as string;
+        }
+      } catch {
+        // Try next method
+      }
     }
+
+    console.warn('[Web3Auth] getPrivateKey: no supported method found');
+    return null;
   }
 
   /**

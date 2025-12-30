@@ -6,5 +6,8 @@ export {
   getTronBalance,
   signMessage,
   sendTransaction,
-  getPrivateKey
+  getPrivateKey,
+  getTrc20Balance,
+  sendTrc20,
+  getTrc20Info,
 } from './lib/tronRpc';

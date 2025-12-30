@@ -5,9 +5,8 @@ import { WEB3AUTH_NETWORK } from '@web3auth/no-modal';
 // ============================================================================
 
 const CLIENT_ID = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || 'YOUR_CLIENT_ID';
-const NETWORK = import.meta.env.PROD
-  ? WEB3AUTH_NETWORK.SAPPHIRE_MAINNET
-  : WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
+// TODO: Switch to SAPPHIRE_MAINNET for production when project is migrated
+const NETWORK = WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
 
 // ============================================================================
 // Web3Auth Connection IDs (from Dashboard)
@@ -34,9 +33,17 @@ export const AUTH_CONNECTION_IDS = {
 // Web3Auth Config
 // ============================================================================
 
+// Always use popup mode - works in both web and Capacitor WebView
+function getUxMode(): 'popup' | 'redirect' {
+  return 'popup';
+}
+
 export const WEB3AUTH_CONFIG = {
   clientId: CLIENT_ID,
   web3AuthNetwork: NETWORK,
+
+  // UX mode: popup for web, redirect for mobile Capacitor
+  uxMode: getUxMode(),
 
   // Session management
   sessionTime: 86400 * 7, // 7 days
@@ -47,6 +54,16 @@ export const WEB3AUTH_CONFIG = {
 };
 
 // ============================================================================
+// Platform Detection
+// ============================================================================
+
+function isNativePlatform(): boolean {
+  if (typeof window === 'undefined') return false;
+  const capacitor = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return capacitor?.isNativePlatform?.() ?? false;
+}
+
+// ============================================================================
 // Redirect Config (for Capacitor)
 // ============================================================================
 
@@ -55,16 +72,15 @@ export const REDIRECT_CONFIG = {
   universalLink: 'https://app.caas.io',
 
   get redirectUrl(): string {
-    const capacitor = typeof window !== 'undefined'
-      ? (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
-      : null;
-
-    const isNative = capacitor?.isNativePlatform?.() ?? false;
-
-    if (isNative) {
-      return `${this.scheme}://auth/callback`;
+    if (isNativePlatform()) {
+      // For Capacitor, use https://localhost which is the internal origin
+      return 'https://localhost/auth/callback';
     }
-
     return `${window.location.origin}/auth/callback`;
+  },
+
+  /** UX mode: popup for web, redirect for mobile */
+  get uxMode(): 'popup' | 'redirect' {
+    return isNativePlatform() ? 'redirect' : 'popup';
   },
 };

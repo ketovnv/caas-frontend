@@ -22,15 +22,17 @@ export const routeConfigs: Record<Route, RouteConfig> = {
     subtitle: 'Visual Effects Gallery',
   },
 
-  // Protected routes (temporarily public for development)
+  // Protected routes
   wallet: {
-    requiresAuth: false,
+    requiresAuth: true,
+    redirectTo: 'home',
     title: 'CaaS - Wallet',
     displayTitle: 'Wallet',
     subtitle: 'Manage your crypto assets',
   },
   exchange: {
-    requiresAuth: false,
+    requiresAuth: true,
+    redirectTo: 'home',
     title: 'CaaS - Exchange',
     displayTitle: 'Exchange',
     subtitle: 'Trade & Swap',

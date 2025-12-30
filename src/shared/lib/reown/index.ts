@@ -86,19 +86,19 @@ class ReownService {
         icons: [`${window.location.origin}/favicon.ico`]
       };
 
-      // Supported networks
+      // Supported networks (cast to tuple type for AppKit)
       const supportedNetworks = [
         networks.mainnet,
-        networks.polygon, 
+        networks.polygon,
         networks.bsc,
         networks.arbitrum,
         networks.optimism,
-      ];
+      ] as const;
 
       // Create AppKit (headless mode)
       this._modal = createAppKit({
         adapters: [new EthersAdapter()],
-        networks: supportedNetworks,
+        networks: supportedNetworks as any,
         projectId,
         metadata,
         features: {

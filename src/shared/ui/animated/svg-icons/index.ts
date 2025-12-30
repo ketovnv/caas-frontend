@@ -16,3 +16,6 @@ export { Icons } from './Icons';
 export { Ethereum } from './Ethereum';
 export { ReactIcon } from './ReactIcon';
 export { BunIcon } from './BunIcon';
+export { TronIcon } from './TronIcon';
+export { UsdtIcon } from './UsdtIcon';
+export { UsdcIcon } from './UsdcIcon';

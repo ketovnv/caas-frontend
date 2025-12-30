@@ -4,6 +4,7 @@ import { tronLinkService } from '@/shared/lib/tronlink';
 import { metaMaskService } from '@/shared/lib/metamask';
 import { reownService, type ReownWalletId } from '@/shared/lib/reown';
 import { hapticsStore } from '@/shared/lib/haptics';
+import { router } from 'app/router';
 
 // ============================================================================
 // Types
@@ -168,16 +169,21 @@ class AuthStore {
     });
 
     try {
+      console.log('[AuthStore] Calling connectWithProvider...');
       const web3authProvider = await web3AuthService.connectWithProvider(
         provider,
         options
       );
 
+      console.log('[AuthStore] Provider returned:', !!web3authProvider);
+
       if (!web3authProvider) {
         throw new Error('Connection failed - no provider returned');
       }
 
+      console.log('[AuthStore] Getting user info...');
       const userInfo = await web3AuthService.getUserInfo();
+      console.log('[AuthStore] User info:', userInfo);
 
       runInAction(() => {
         this.status = 'connected';
@@ -187,9 +193,15 @@ class AuthStore {
         this.walletType = 'web3auth';
       });
 
+      console.log('[AuthStore] State updated, navigating to wallet...');
       hapticsStore.playWeb3('connectSuccess');
 
+      // Redirect to wallet after successful login
+      router.navigate('wallet');
+      console.log('[AuthStore] Navigation called');
+
     } catch (error) {
+      console.error('[AuthStore] Connect error:', error);
       runInAction(() => {
         this.status = 'error';
         this.error = error as Error;
@@ -259,6 +271,9 @@ class AuthStore {
 
       hapticsStore.playWeb3('connectSuccess');
 
+      // Redirect to wallet after successful login
+      router.navigate('wallet');
+
     } catch (error) {
       runInAction(() => {
         this.status = 'error';
@@ -303,6 +318,9 @@ class AuthStore {
 
       // Setup listeners for account/chain changes
       this.setupMetaMaskListeners();
+
+      // Redirect to wallet after successful login
+      router.navigate('wallet');
 
     } catch (error) {
       runInAction(() => {
@@ -380,13 +398,16 @@ class AuthStore {
         this.walletType = 'reown';
         this.walletAddress = address;
         this.chainId = reownService.chainId;
-        this.userInfo = { 
-          name: walletInfo?.name || 'WalletConnect' 
+        this.userInfo = {
+          name: walletInfo?.name || 'WalletConnect'
         };
         this.selectedProvider = null;
       });
 
       hapticsStore.playWeb3('connectSuccess');
+
+      // Redirect to wallet after successful login
+      router.navigate('wallet');
 
     } catch (error) {
       runInAction(() => {
@@ -435,13 +456,16 @@ class AuthStore {
         this.walletType = 'reown';
         this.walletAddress = address;
         this.chainId = reownService.chainId;
-        this.userInfo = { 
-          name: walletInfo?.name || walletId 
+        this.userInfo = {
+          name: walletInfo?.name || walletId
         };
         this.selectedProvider = null;
       });
 
       hapticsStore.playWeb3('connectSuccess');
+
+      // Redirect to wallet after successful login
+      router.navigate('wallet');
 
     } catch (error) {
       runInAction(() => {
