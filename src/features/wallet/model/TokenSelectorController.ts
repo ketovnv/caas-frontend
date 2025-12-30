@@ -4,7 +4,7 @@ import {
   INACTIVE_STATE,
   TOKEN_BUTTON_CONFIG,
   type TokenButtonState,
-} from './token-selector.config';
+} from '../config/token-selector.config.ts';
 
 // ============================================================================
 // Token Button Controller - Animation for individual token button

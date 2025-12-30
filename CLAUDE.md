@@ -44,8 +44,8 @@ src/
 ├── app/              # App entry, providers (Web3Auth, Router, ErrorBoundary)
 ├── pages/            # Route components (home, showcase, wallet, exchange, settings)
 ├── widgets/          # Complex UI blocks (global-header, nav-links)
-├── features/         # User interactions (auth, error, wallet)
-├── entities/         # Business entities (empty - use .gitkeep)
+├── features/         # User interactions (auth, error)
+├── entities/         # Business entities (wallet)
 └── shared/           # Reusable UI kit and utilities
     ├── ui/animated/  # React Spring animation components
     ├── lib/          # cn(), gradient utilities, React Spring re-exports
@@ -92,18 +92,23 @@ core.onFrame(callback);                 // Subscribe to animation frames
 core.createThrottledUpdater(handler);   // Throttle to animation frames
 ```
 
+## Environment Variables
+
+```bash
+VITE_WEB3AUTH_CLIENT_ID=...  # Required for Web3Auth (Sapphire Devnet)
+```
+
 ## Key Integrations
 
 ### Web3Auth
 - Config: `features/auth/config/` and `shared/lib/web3auth/`
 - Uses Sapphire Devnet
-- Requires `VITE_WEB3AUTH_CLIENT_ID` env variable
 
 ### Wallet Connections (Reown AppKit)
 - `shared/lib/reown/` - Reown AppKit integration for WalletConnect
 - Supports MetaMask (`shared/lib/metamask/`) and TronLink (`shared/lib/tronlink/`)
 
-### Multi-Chain Wallet (`features/wallet/`)
+### Multi-Chain Wallet (`entities/wallet/`)
 - `model/wallet.store.ts` - MobX store for balances, tokens, transactions
 - `lib/evmRpc.ts` - Ethereum RPC helpers via ethers.js (Sepolia)
 - `config/chains.ts` - Chain configs (Tron, Ethereum)
@@ -131,14 +136,20 @@ Located in `shared/ui/animated/`:
 
 React Spring re-exports and `createControllerAPI()` helper available in `shared/lib/animated.ts`
 
-## Color Spring Classes (`shared/lib/gradient.ts`)
+## Spring Classes (`shared/lib/`)
 
+### Color Springs (`gradient.ts`)
 Core building blocks for animated OKLCH colors:
 - `ColorSpring` — single animated OKLCH color
 - `GradientSpring` — 4-color gradient (radial/linear/conic)
 - `ColorArraySpring` — array of 4 independent animated colors
 - `MultiStopGradientSpring` — gradient with arbitrary number of colors (rainbow)
 - `DynamicColorArraySpring` — resizable array of animated colors
+
+### Icon Spring (`icon-spring.ts`)
+Animated SVG icon system with gesture support:
+- `IconSpring` — base class for animated icons with spring transforms
+- Supports press/hover states with configurable spring configs
 
 ## Conventions
 
@@ -197,7 +208,7 @@ export class BalanceDisplayController {
 - `ColorSpring` — один OKLCH цвет с анимацией (`shared/lib/gradient.ts`)
 - `GradientSpring` — 4-цветный градиент (radial/linear/conic)
 - `DynamicColorArraySpring` — массив произвольного числа цветов
-- `BalanceDisplayController` — баланс с trail-анимацией (`features/wallet/`)
+- `BalanceDisplayController` — баланс с trail-анимацией (`entities/wallet/`)
 - `ChainSelectorController`, `TokenSelectorController` — селекторы
 
 ### Принципы
@@ -216,9 +227,17 @@ Page transitions use swipe-based navigation with configurable animation types:
 - `getTransitionType()` returns `slide-left`, `slide-right`, or `scale` based on distance
 - Protected routes (`wallet`, `exchange`) redirect to `home` when unauthenticated
 
+## Testing
+
+Tests use Vitest. Place test files next to source files with `.test.ts` suffix:
+```
+src/shared/lib/gradient.test.ts
+src/features/auth/model/auth.store.test.ts
+```
+
 ## Reference Examples (gitignored)
 
-Папка `examples/` содержит справочные материалы (не входит в сборку):
-- **inspira-ui/** - компоненты Inspira UI для референса
-- **web3auth/** - примеры интеграции Web3Auth
-- **react-spring/** - исходники React Spring для изучения API
+The `examples/` folder contains reference materials (not part of build):
+- **inspira-ui/** - Inspira UI components for reference
+- **web3auth/** - Web3Auth integration examples
+- **react-spring/** - React Spring source for studying API

@@ -7,7 +7,7 @@ import {
   ITEM_SPRING_CONFIG,
   STAGGER_DELAY,
   type CurrencyItemState,
-} from './currency-list.config';
+} from '../config/currency-list.config.ts';
 
 // ============================================================================
 // Currency Item Controller - Single list item

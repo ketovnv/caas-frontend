@@ -9,7 +9,7 @@ import {
   COPY_FEEDBACK_DURATION,
   type BalanceDisplayState,
   type TrailItemState,
-} from './balance-display.config';
+} from '../config/balance-display.config.ts';
 
 // ============================================================================
 // Balance Display Controller - Animation + MobX state
