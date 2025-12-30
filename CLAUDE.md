@@ -1,4 +1,4 @@
- CLAUDE.md
+ # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CaaS (Crypto-as-a-Service) frontend - a platform for cryptocurrency operations. Currently implements:
 - Web3Auth social login (Google, Facebook, Twitter, Discord, Email, SMS)
-- Tron blockchain integration via TronWeb
+- Multi-chain wallet (Tron + Ethereum) with native and token transfers
 - Animated UI component library built on React Spring
 
 ## Tech Stack
@@ -16,8 +16,9 @@ CaaS (Crypto-as-a-Service) frontend - a platform for cryptocurrency operations. 
 - **Framework**: React 19 + TypeScript (strict mode)
 - **Styling**: Tailwind CSS 4
 - **Animation**: React Spring (@react-spring/web) + Motion
-- **Auth**: Web3Auth Modal
-- **Blockchain**: TronWeb (Shasta testnet)
+- **State**: MobX (stores + makeAutoObservable)
+- **Auth**: Web3Auth No-Modal SDK
+- **Blockchain**: TronWeb (Shasta testnet), Ethers.js (Sepolia testnet)
 - **Mobile**: Capacitor (Android target)
 
 ## Development Commands
@@ -102,6 +103,12 @@ core.createThrottledUpdater(handler);   // Throttle to animation frames
 - `shared/lib/reown/` - Reown AppKit integration for WalletConnect
 - Supports MetaMask (`shared/lib/metamask/`) and TronLink (`shared/lib/tronlink/`)
 
+### Multi-Chain Wallet (`features/wallet/`)
+- `model/wallet.store.ts` - MobX store for balances, tokens, transactions
+- `lib/evmRpc.ts` - Ethereum RPC helpers via ethers.js (Sepolia)
+- `config/chains.ts` - Chain configs (Tron, Ethereum)
+- `config/tokens.ts` - Token registry (USDT, USDC with per-chain contracts)
+
 ### Tron Integration
 - RPC helpers in `features/auth/lib/tronRpc.ts` (Shasta testnet)
 - TronLink wallet adapter in `shared/lib/tronlink/`
@@ -151,7 +158,6 @@ Core building blocks for animated OKLCH colors:
 const [spring1, api1] = useSpring(() => ({...}));
 const [spring2, api2] = useSpring(() => ({...}));
 const [spring3, api3] = useSpring(() => ({...}));
-// ... и так 7 раз
 
 // ✅ ХОРОШО: Один контроллер с чистым API
 class ToggleController {
@@ -168,20 +174,47 @@ const ctrl = new ToggleController(translate);
 <animated.div style={{ transform: ctrl.thumbTransform }} />
 ```
 
+### Config + Controller Pattern
+
+Animation states live in `*.config.ts`, controllers in `*Controller.ts`:
+```typescript
+// balance-display.config.ts — состояния и конфиги
+export const HIDDEN_STATE = { opacity: 0, y: 20 };
+export const VISIBLE_STATE = { opacity: 1, y: 0 };
+export const TRAIL_CONFIG: SpringConfig = { tension: 200, friction: 20 };
+
+// BalanceDisplayController.ts — логика анимаций
+export class BalanceDisplayController {
+  constructor(config?: SpringConfig) {...}
+  show(config?: SpringConfig) {...}
+  hide(config?: SpringConfig) {...}
+  dispose() {...}
+}
+```
+
 ### Примеры контроллеров
 
-- `ColorSpring` — один OKLCH цвет с анимацией
+- `ColorSpring` — один OKLCH цвет с анимацией (`shared/lib/gradient.ts`)
 - `GradientSpring` — 4-цветный градиент (radial/linear/conic)
 - `DynamicColorArraySpring` — массив произвольного числа цветов
-- `ToggleController` — все анимации переключателя темы
+- `BalanceDisplayController` — баланс с trail-анимацией (`features/wallet/`)
+- `ChainSelectorController`, `TokenSelectorController` — селекторы
 
 ### Принципы
 
-1. **Состояния в константах** — `LIGHT_STATE`, `DARK_STATE` вне компонента
-2. **Геттеры для значений** — `get thumbTransform()`, `get sunStyle()`
-3. **Методы для анимаций** — `toLight()`, `toDark()`, `animateTo()`
+1. **Состояния в константах** — `HIDDEN_STATE`, `VISIBLE_STATE` в `*.config.ts`
+2. **Геттеры для значений** — `get mainStyle()`, `getTrailStyle(index)`
+3. **Методы для анимаций** — `show()`, `hide()`, `reset()`
 4. **Один Controller** — вместо множества `useSpring`
-5. **themeStore.springConfig** — единый конфиг для синхронизации
+5. **dispose()** — обязательный метод для cleanup
+6. **MobX integration** — `makeAutoObservable` with excluded non-observable controllers
+
+## Routing (`app/router/`)
+
+Page transitions use swipe-based navigation with configurable animation types:
+- `NAVIGATION_ORDER` defines swipe order: home → showcase → textures → wallet → exchange → settings
+- `getTransitionType()` returns `slide-left`, `slide-right`, or `scale` based on distance
+- Protected routes (`wallet`, `exchange`) redirect to `home` when unauthenticated
 
 ## Reference Examples (gitignored)
 
