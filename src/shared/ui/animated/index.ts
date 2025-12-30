@@ -27,7 +27,7 @@ export {RainbowButton, type RainbowButtonProps} from './button';
 
 // Input Components
 
-export {AnimatedInput, type AnimatedInputProps, type AnimatedInputRef, AnimatedInputController} from './input';
+export {AnimatedInput, type AnimatedInputProps, AnimatedInputController} from './input';
 // Legacy (deprecated - use AnimatedInput)
 export {SpotlightInput, type SpotlightInputProps} from './input';
 export {VanishInput, type VanishInputProps, type VanishInputRef} from './input';
@@ -74,3 +74,6 @@ export {ThemeToggle, type ThemeToggleProps} from './theme-toggle';
 export {GlowBorder, type GlowBorderProps} from './glow';
 export {GlowingEffect, type GlowingEffectProps} from './glow';
 export {GlowingEffectCard, type GlowingEffectCardProps} from './glow';
+
+
+export * from './svg-icons';

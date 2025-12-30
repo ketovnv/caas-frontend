@@ -31,15 +31,11 @@ export const TOKEN_BUTTON_CONFIG: SpringConfig = {
 /** Token display info */
 export const TOKEN_DISPLAY: Record<TokenId, { color: string; bgClass: string }> = {
   native: {
-    color: 'text-violet-400',
-    bgClass: 'bg-violet-500/20',
+    color: 'text-red-400',
+    bgClass: 'bg-red-500/20',
   },
   usdt: {
     color: 'text-emerald-400',
     bgClass: 'bg-emerald-500/20',
-  },
-  usdc: {
-    color: 'text-blue-400',
-    bgClass: 'bg-blue-500/20',
   },
 };

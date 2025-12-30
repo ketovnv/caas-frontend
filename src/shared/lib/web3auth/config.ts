@@ -1,13 +1,12 @@
-import { WEB3AUTH_NETWORK, CHAIN_NAMESPACES } from '@web3auth/base';
-import { EthereumPrivateKeyProvider } from '@web3auth/ethereum-provider';
-
 // ============================================================================
 // Environment
 // ============================================================================
 
 const CLIENT_ID = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || 'YOUR_CLIENT_ID';
-// TODO: Switch to SAPPHIRE_MAINNET for production
-const NETWORK = WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
+
+// WEB3AUTH_NETWORK values (avoiding import issues with Vite)
+// TODO: Switch to 'sapphire_mainnet' for production
+const NETWORK = 'sapphire_devnet' as const;
 
 // ============================================================================
 // Web3Auth Connection IDs (from Dashboard)
@@ -29,7 +28,7 @@ export const AUTH_CONNECTION_IDS = {
 // ============================================================================
 
 export const CHAIN_CONFIG = {
-  chainNamespace: CHAIN_NAMESPACES.EIP155,
+  chainNamespace: 'eip155' as const,
   chainId: '0xaa36a7', // Sepolia
   rpcTarget: 'https://rpc.sepolia.org',
   displayName: 'Ethereum Sepolia',
@@ -40,25 +39,17 @@ export const CHAIN_CONFIG = {
 };
 
 // ============================================================================
-// Private Key Provider (required for private key access)
-// ============================================================================
-
-export const privateKeyProvider = new EthereumPrivateKeyProvider({
-  config: { chainConfig: CHAIN_CONFIG },
-});
-
-// ============================================================================
-// Web3Auth Config (v9)
+// Web3Auth Config (v10)
 // ============================================================================
 
 export const WEB3AUTH_CONFIG = {
   clientId: CLIENT_ID,
   web3AuthNetwork: NETWORK,
   chainConfig: CHAIN_CONFIG,
-  privateKeyProvider,
 
-  // Session: 7 days
+  // Session: 7 days, persist in localStorage
   sessionTime: 86400 * 7,
+  storageType: 'local' as const,
 
   // Logging
   enableLogging: !import.meta.env.PROD,

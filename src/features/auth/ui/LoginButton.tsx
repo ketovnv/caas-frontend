@@ -4,7 +4,7 @@ import { authStore } from '../model/auth.store';
 import { LoginOptions } from './LoginOptions';
 import { RippleButton } from 'shared/ui';
 import { web3AuthService } from '@/shared/lib/web3auth';
-import { getTronAccount, getTronBalance } from '../lib/tronRpc';
+import { getTronAccount } from '../lib/tronRpc';
 
 // ============================================================================
 // Login Button Component
@@ -14,7 +14,6 @@ export const LoginButton = observer(function LoginButton() {
   const { isConnected, profileImage, displayName, email, status } = authStore;
 
   const [tronAddress, setTronAddress] = useState<string>('');
-  const [balance, setBalance] = useState<string>('');
 
   useEffect(() => {
     const fetchAccountInfo = async () => {
@@ -22,9 +21,6 @@ export const LoginButton = observer(function LoginButton() {
         try {
           const address = await getTronAccount(web3AuthService.provider);
           setTronAddress(address);
-
-          const bal = await getTronBalance(web3AuthService.provider);
-          setBalance(bal);
         } catch (error) {
           console.error('Error fetching account info:', error);
         }
@@ -37,7 +33,6 @@ export const LoginButton = observer(function LoginButton() {
   const handleLogout = async () => {
     await authStore.disconnect();
     setTronAddress('');
-    setBalance('');
   };
 
   // Loading state during initialization
@@ -84,12 +79,12 @@ export const LoginButton = observer(function LoginButton() {
           </div>
         )}
 
-        {balance && (
-          <div className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4">
-            <p className="text-zinc-400 text-xs mb-1">Balance</p>
-            <p className="text-white text-lg font-semibold">{balance} TRX</p>
-          </div>
-        )}
+        {/*{balance && (*/}
+        {/*  <div className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4">*/}
+        {/*    <p className="text-zinc-400 text-xs mb-1">Balance</p>*/}
+        {/*    <p className="text-white text-lg font-semibold">{balance} TRX</p>*/}
+        {/*  </div>*/}
+        {/*)}*/}
 
         <RippleButton
           onClick={handleLogout}

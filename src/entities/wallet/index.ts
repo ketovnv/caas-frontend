@@ -9,55 +9,43 @@ export type {
   TokenBalance,
   Transaction,
   SendTransactionParams,
-} from './model/types';
+} from 'entities/wallet/model/types';
 
-export { createAssetKey, parseAssetKey } from './model/types';
+export { createAssetKey, parseAssetKey } from 'entities/wallet/model/types';
 
 // Store
-export { walletStore } from './model/wallet.store';
+export { walletStore } from 'entities/wallet/model/wallet.store';
 
 // Chain Config
 export {
   CHAIN_CONFIGS,
   TRON_CONFIG,
-  ETHEREUM_CONFIG,
   DEFAULT_CHAIN,
   getExplorerTxUrl,
   getExplorerAddressUrl,
-} from './config/chains';
+} from 'entities/wallet/config/chains';
 
 // Token Config
 export {
   TOKENS,
   NATIVE_TOKEN,
   USDT_TOKEN,
-  USDC_TOKEN,
   getTokensForChain,
   getTokenContract,
   getTokenConfig,
   getTokenAddress,
   USE_TESTNET_TOKENS,
-} from './config/tokens';
+} from 'entities/wallet/config/tokens';
 
 // Input Config
 export {
   AMOUNT_INPUT_PROPS,
   ADDRESS_INPUT_PROPS,
   MESSAGE_INPUT_PROPS,
-} from './config';
+} from 'entities/wallet/config';
 
-// RPC - EVM
-export {
-  getEvmAccount,
-  getEvmBalance,
-  sendEvmTransaction,
-  signEvmMessage,
-  estimateGas,
-  getErc20Balance,
-  sendErc20,
-  getErc20Info,
-  estimateErc20Gas,
-} from './lib/evmRpc';
-// UI
-export { CurrencyList, type CurrencyItem, type CurrencyListProps } from 'features/wallet/ui/CurrencyList';
-export { CurrencyListController, CurrencyItemController } from 'features/wallet/model/CurrencyListController';
+
+export * from 'entities/wallet/model/'
+export * from 'entities/wallet/ui/'
+export * from 'entities/wallet/config/'
+

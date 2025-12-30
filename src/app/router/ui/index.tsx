@@ -21,21 +21,13 @@ import {
 // ─────────────────────────────────────────────────────────────
 
 const HomePage = lazy(() => import('pages/home').then(m => ({ default: m.HomePage })));
-const ComponentsShowcase = lazy(() => import('pages/showcase').then(m => ({ default: m.ComponentsShowcase })));
-const TextureGallery = lazy(() => import('pages/textures').then(m => ({ default: m.TextureGallery })));
-const WalletPage = lazy(() => import('pages/wallet').then(m => ({ default: m.WalletPage })));
-const ExchangePage = lazy(() => import('pages/exchange').then(m => ({ default: m.ExchangePage })));
 const SettingsPage = lazy(() => import('pages/settings').then(m => ({ default: m.SettingsPage })));
 const NotFoundPage = lazy(() => import('pages/not-found').then(m => ({ default: m.NotFoundPage })));
 
 // Route → Component mapping
 const routes: Record<Route, ComponentType> = {
   home: HomePage,
-  showcase: ComponentsShowcase,
-  wallet: WalletPage,
-  exchange: ExchangePage,
   settings: SettingsPage,
-  textures: TextureGallery,
   'not-found': NotFoundPage,
 };
 
@@ -128,7 +120,7 @@ export const AppRouter = observer(function AppRouter() {
       ...transitionSpring,
       duration: transitionConfig.duration,
     },
-    exitBeforeEnter: false,
+    exitBeforeEnter: true,
     onRest: (_result, _spring, item) => {
       // Only call when the entering item finishes
       if (item === currentRoute) {
@@ -139,7 +131,7 @@ export const AppRouter = observer(function AppRouter() {
 
   return (
     <div
-      className="relative w-full"
+      className="relative w-full overflow-hidden"
       style={{ perspective: '1200px' }}
     >
       {transitions((style, route) => {
@@ -162,10 +154,13 @@ export const AppRouter = observer(function AppRouter() {
                 ? (style.rotateY as any).to((v: number) => v + ctrl.dragRotateY.get())
                 : style.rotateY,
               position: isCurrentPage ? 'relative' : 'absolute',
+              top: isCurrentPage ? undefined : 0,
+              left: isCurrentPage ? undefined : 0,
               width: '100%',
               transformStyle: 'preserve-3d',
               willChange: 'transform, opacity',
               touchAction: 'pan-y',
+              pointerEvents: isCurrentPage ? 'auto' : 'none',
             }}
           >
             <Suspense fallback={<PageLoader />}>

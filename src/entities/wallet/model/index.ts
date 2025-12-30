@@ -1,1 +1,5 @@
-export * from 'features/wallet/model'
+export * from 'entities/wallet/model/BalanceDisplayController'
+export * from 'entities/wallet/model/ChainSelectorController'
+export * from 'entities/wallet/model/CurrencyListController'
+export * from 'entities/wallet/model/TokenSelectorController'
+export * from 'entities/wallet/model/wallet.store'

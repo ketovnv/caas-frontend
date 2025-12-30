@@ -1,12 +1,26 @@
-import { Web3AuthNoModal } from '@web3auth/no-modal';
-import { AuthAdapter } from '@web3auth/auth-adapter';
-import { WALLET_ADAPTERS, type IProvider } from '@web3auth/base';
-import { WEB3AUTH_CONFIG, privateKeyProvider } from './config';
+import { Web3AuthNoModal, WALLET_CONNECTORS, AUTH_CONNECTION } from '@web3auth/no-modal';
+import type { IProvider } from '@web3auth/no-modal';
+import { WEB3AUTH_CONFIG, AUTH_CONNECTION_IDS } from './config';
 import type { LoginProvider } from './types';
 
+// Re-export IProvider from @web3auth/no-modal
+export type { IProvider } from '@web3auth/no-modal';
+
 // ============================================================================
-// Web3Auth Service (Singleton) - v9 API
+// Web3Auth Service (Singleton) - v10 API
 // ============================================================================
+
+// Map our LoginProvider strings to AUTH_CONNECTION values
+const AUTH_CONNECTION_MAP: Record<LoginProvider, string> = {
+  google: AUTH_CONNECTION.GOOGLE,
+  facebook: AUTH_CONNECTION.FACEBOOK,
+  twitter: AUTH_CONNECTION.TWITTER,
+  discord: AUTH_CONNECTION.DISCORD,
+  github: AUTH_CONNECTION.GITHUB,
+  apple: AUTH_CONNECTION.APPLE,
+  email_passwordless: AUTH_CONNECTION.EMAIL_PASSWORDLESS,
+  sms_passwordless: AUTH_CONNECTION.SMS_PASSWORDLESS,
+};
 
 class Web3AuthService {
   private instance: Web3AuthNoModal | null = null;
@@ -34,23 +48,13 @@ class Web3AuthService {
   private async _doInit(): Promise<Web3AuthNoModal> {
     this.instance = new Web3AuthNoModal(WEB3AUTH_CONFIG);
 
-    // Configure Auth adapter for social logins (v9)
-    const authAdapter = new AuthAdapter({
-      privateKeyProvider,
-      adapterSettings: {
-        uxMode: 'popup',
-      },
+    // Subscribe to error events
+    this.instance.on('errored', (error) => {
+      console.error('[Web3Auth] Error:', error);
     });
-
-    this.instance.configureAdapter(authAdapter);
 
     await this.instance.init();
     this._isInitialized = true;
-
-    console.log('[Web3Auth] Initialized', {
-      connected: this.instance.connected,
-      provider: this.instance.provider ? 'yes' : 'no',
-    });
 
     return this.instance;
   }
@@ -76,7 +80,7 @@ class Web3AuthService {
   }
 
   // ─────────────────────────────────────────────────────────
-  // Connection Methods (v9 API)
+  // Connection Methods (v10 API)
   // ─────────────────────────────────────────────────────────
 
   async connectWithProvider(
@@ -100,10 +104,8 @@ class Web3AuthService {
     if (this.instance.connected && this.instance.provider) {
       try {
         await this.instance.getUserInfo();
-        console.log('[Web3Auth] Already connected');
         return this.instance.provider;
       } catch {
-        console.log('[Web3Auth] Stale session, logging out');
         await this.instance.logout().catch(() => {});
       }
     }
@@ -111,12 +113,22 @@ class Web3AuthService {
     this._isConnecting = true;
 
     try {
-      console.log('[Web3Auth] Connecting with:', provider);
+      // Get the proper AUTH_CONNECTION value
+      const authConnection = AUTH_CONNECTION_MAP[provider];
+      if (!authConnection) {
+        throw new Error(`Unknown provider: ${provider}`);
+      }
 
-      // Build login params for v9
+      // Build login params for v10 API
       const loginParams: Record<string, unknown> = {
-        loginProvider: provider,
+        authConnection,
       };
+
+      // Add authConnectionId from Dashboard if configured
+      const authConnectionId = AUTH_CONNECTION_IDS[provider];
+      if (authConnectionId) {
+        loginParams.authConnectionId = authConnectionId;
+      }
 
       // Add hints for passwordless methods
       if (provider === 'email_passwordless' && options?.email) {
@@ -127,11 +139,13 @@ class Web3AuthService {
       }
 
       const web3authProvider = await this.instance.connectTo(
-        WALLET_ADAPTERS.AUTH,
+        WALLET_CONNECTORS.AUTH,
         loginParams
       );
 
       return web3authProvider;
+    } catch (error) {
+      throw error;
     } finally {
       this._isConnecting = false;
     }
@@ -151,26 +165,21 @@ class Web3AuthService {
   }
 
   /**
-   * Get private key (works with v9 + EthereumPrivateKeyProvider)
+   * Get private key (v10 API)
+   * Uses 'private_key' method - the standard for v10
    */
   async getPrivateKey(): Promise<string | null> {
     if (!this.provider) return null;
 
-    const methods = ['eth_private_key', 'private_key'];
-
-    for (const method of methods) {
-      try {
-        const privateKey = await this.provider.request({ method });
-        if (privateKey) {
-          console.log('[Web3Auth] Got private key via:', method);
-          return privateKey as string;
-        }
-      } catch {
-        // Try next
+    try {
+      const privateKey = await this.provider.request({ method: 'private_key' });
+      if (privateKey) {
+        return privateKey as string;
       }
+    } catch (error) {
+      console.warn('[Web3Auth] getPrivateKey failed:', error);
     }
 
-    console.warn('[Web3Auth] getPrivateKey: no method worked');
     return null;
   }
 
@@ -188,32 +197,92 @@ class Web3AuthService {
   // Session Management
   // ─────────────────────────────────────────────────────────
 
+  /**
+   * Wait for session restoration (v10 restores asynchronously after init)
+   * Returns user info if session restored, null otherwise
+   */
+  private _waitForSessionRestore(timeoutMs = 10000): Promise<Record<string, unknown> | null> {
+    return new Promise((resolve) => {
+      // Check if already fully ready
+      if (this.instance?.provider) {
+        this.instance.getUserInfo()
+          .then(info => resolve(info as Record<string, unknown>))
+          .catch(() => resolve(null));
+        return;
+      }
+
+      // Not connected at all - no session
+      if (!this.instance?.connected) {
+        resolve(null);
+        return;
+      }
+
+      let resolved = false;
+
+      // Listen for connected event (fires when provider is truly ready)
+      const onConnected = async (data: { reconnected?: boolean }) => {
+        if (resolved) return;
+
+        if (data?.reconnected) {
+          resolved = true;
+          cleanup();
+
+          // Small delay to ensure internal state is ready
+          await new Promise(r => setTimeout(r, 100));
+
+          try {
+            const userInfo = await this.instance?.getUserInfo();
+            resolve(userInfo as Record<string, unknown>);
+          } catch {
+            resolve(null);
+          }
+        }
+      };
+
+      // Cleanup function
+      const cleanup = () => {
+        this.instance?.off('connected', onConnected);
+        clearTimeout(timeoutId);
+      };
+
+      this.instance?.on('connected', onConnected);
+
+      // Timeout
+      const timeoutId = setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        resolve(null);
+      }, timeoutMs);
+    });
+  }
+
   async checkSession(): Promise<boolean> {
     if (!this.instance) {
       await this.init();
     }
 
     const isConnected = this.instance?.connected ?? false;
-    console.log('[Web3Auth] checkSession:', { isConnected, hasProvider: !!this.provider });
 
-    if (!isConnected || !this.provider) {
+    // Not connected - no session
+    if (!isConnected) {
       return false;
     }
 
-    try {
-      const userInfo = await this.instance?.getUserInfo();
-      const isValid = !!userInfo;
-      console.log('[Web3Auth] Session valid:', isValid);
-      return isValid;
-    } catch (error) {
-      console.warn('[Web3Auth] Session invalid:', error);
+    // Already have provider - check session directly
+    if (this.provider) {
       try {
-        await this.instance?.logout();
+        const userInfo = await this.instance?.getUserInfo();
+        return !!userInfo;
       } catch {
-        // Ignore
+        return false;
       }
-      return false;
     }
+
+    // v10: connected=true but no provider yet
+    // Wait for the 'connected' event with reconnected=true
+    const userInfo = await this._waitForSessionRestore();
+    return !!userInfo;
   }
 
   async handleRedirectCallback(): Promise<IProvider | null> {

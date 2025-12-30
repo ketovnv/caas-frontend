@@ -83,26 +83,18 @@ class AuthStore {
   // ─────────────────────────────────────────────────────────
 
   private async initialize() {
-    console.log('[AuthStore] Initializing...');
-
     try {
       // Init Web3Auth
       await web3AuthService.init();
-      console.log('[AuthStore] Web3Auth initialized');
 
       // Init Reown (non-blocking)
-      reownService.init().catch(err => {
-        console.warn('[AuthStore] Reown init failed:', err);
-      });
+      reownService.init().catch(() => {});
 
       // Check for existing session
-      console.log('[AuthStore] Checking for existing session...');
       const hasSession = await web3AuthService.checkSession();
-      console.log('[AuthStore] Session check result:', hasSession);
 
       if (hasSession) {
         const userInfo = await web3AuthService.getUserInfo();
-        console.log('[AuthStore] Restored session for:', userInfo?.email || userInfo?.name);
 
         runInAction(() => {
           this.status = 'connected';
@@ -114,7 +106,6 @@ class AuthStore {
         // Welcome back haptic
         hapticsStore.play('success');
       } else {
-        console.log('[AuthStore] No active session, ready for login');
         runInAction(() => {
           this.status = 'ready';
         });
@@ -124,9 +115,8 @@ class AuthStore {
       this._subscribeToReown();
 
     } catch (error) {
-      console.error('[AuthStore] Init error:', error);
       runInAction(() => {
-        this.status = 'ready'; // Fall back to ready instead of error
+        this.status = 'ready';
         this.error = error as Error;
       });
     }
@@ -176,21 +166,16 @@ class AuthStore {
     });
 
     try {
-      console.log('[AuthStore] Calling connectWithProvider...');
       const web3authProvider = await web3AuthService.connectWithProvider(
         provider,
         options
       );
 
-      console.log('[AuthStore] Provider returned:', !!web3authProvider);
-
       if (!web3authProvider) {
         throw new Error('Connection failed - no provider returned');
       }
 
-      console.log('[AuthStore] Getting user info...');
       const userInfo = await web3AuthService.getUserInfo();
-      console.log('[AuthStore] User info:', userInfo);
 
       runInAction(() => {
         this.status = 'connected';
@@ -200,15 +185,12 @@ class AuthStore {
         this.walletType = 'web3auth';
       });
 
-      console.log('[AuthStore] State updated, navigating to wallet...');
       hapticsStore.playWeb3('connectSuccess');
 
       // Redirect to wallet after successful login
-      router.navigate('wallet');
-      console.log('[AuthStore] Navigation called');
+      router.navigate('home');
 
     } catch (error) {
-      console.error('[AuthStore] Connect error:', error);
       runInAction(() => {
         this.status = 'error';
         this.error = error as Error;
@@ -279,7 +261,7 @@ class AuthStore {
       hapticsStore.playWeb3('connectSuccess');
 
       // Redirect to wallet after successful login
-      router.navigate('wallet');
+      router.navigate('home');
 
     } catch (error) {
       runInAction(() => {
@@ -327,7 +309,7 @@ class AuthStore {
       this.setupMetaMaskListeners();
 
       // Redirect to wallet after successful login
-      router.navigate('wallet');
+      router.navigate('home');
 
     } catch (error) {
       runInAction(() => {
@@ -357,8 +339,7 @@ class AuthStore {
     });
 
     // Chain changed
-    metaMaskService.onChainChanged((chainId) => {
-      console.log('[AuthStore] MetaMask chain changed:', chainId);
+    metaMaskService.onChainChanged(() => {
       // Could reload or update UI here
     });
   }
@@ -414,7 +395,7 @@ class AuthStore {
       hapticsStore.playWeb3('connectSuccess');
 
       // Redirect to wallet after successful login
-      router.navigate('wallet');
+      router.navigate('home');
 
     } catch (error) {
       runInAction(() => {
@@ -472,7 +453,7 @@ class AuthStore {
       hapticsStore.playWeb3('connectSuccess');
 
       // Redirect to wallet after successful login
-      router.navigate('wallet');
+      router.navigate('home');
 
     } catch (error) {
       runInAction(() => {

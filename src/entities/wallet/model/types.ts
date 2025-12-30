@@ -3,10 +3,10 @@
 // ============================================================================
 
 /** Supported blockchain networks */
-export type ChainId = 'tron' | 'ethereum';
+export type ChainId = 'tron';
 
 /** Supported tokens */
-export type TokenId = 'native' | 'usdt' | 'usdc';
+export type TokenId = 'native' | 'usdt';
 
 /** Composite key for chain + token */
 export type AssetKey = `${ChainId}:${TokenId}`;

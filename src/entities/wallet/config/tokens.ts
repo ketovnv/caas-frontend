@@ -1,10 +1,10 @@
 import type { ChainId } from '../model/types';
 
 // ============================================================================
-// Token Configuration - TRC-20 and ERC-20 tokens
+// Token Configuration - TRC-20 tokens (Tron only)
 // ============================================================================
 
-export type TokenId = 'native' | 'usdt' | 'usdc';
+export type TokenId = 'native' | 'usdt';
 
 export interface TokenConfig {
   id: TokenId;
@@ -23,9 +23,9 @@ export interface TokenConfig {
 
 export const NATIVE_TOKEN: TokenConfig = {
   id: 'native',
-  symbol: 'NATIVE',
-  name: 'Native Currency',
-  decimals: 18,
+  symbol: 'TRX',
+  name: 'TRON',
+  decimals: 6, // TRX uses 6 decimals (SUN)
   contracts: {},
 };
 
@@ -35,29 +35,10 @@ export const USDT_TOKEN: TokenConfig = {
   name: 'Tether USD',
   decimals: 6,
   contracts: {
-    // Tron USDT
-    tron: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // Mainnet
-    // For Shasta testnet, we'll use a mock or deploy our own
-    // tron: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs', // Shasta test token
-
-    // Ethereum USDT
-    ethereum: '0xdAC17F958D2ee523a2206206994597C13D831ec7', // Mainnet
-    // ethereum: '0x7169D38820dfd117C3FA1f22a697dBA58d90BA06', // Sepolia
-  },
-};
-
-export const USDC_TOKEN: TokenConfig = {
-  id: 'usdc',
-  symbol: 'USDC',
-  name: 'USD Coin',
-  decimals: 6,
-  contracts: {
-    // Tron USDC
-    tron: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', // Mainnet
-
-    // Ethereum USDC
-    ethereum: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Mainnet
-    // ethereum: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia
+    // Tron USDT (Mainnet)
+    tron: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+    // For Shasta testnet, use test token address
+    // tron: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs',
   },
 };
 
@@ -68,7 +49,6 @@ export const USDC_TOKEN: TokenConfig = {
 export const TOKENS: Record<TokenId, TokenConfig> = {
   native: NATIVE_TOKEN,
   usdt: USDT_TOKEN,
-  usdc: USDC_TOKEN,
 };
 
 /** Get tokens available on a specific chain */
@@ -95,13 +75,8 @@ export function getTokenConfig(tokenId: TokenId): TokenConfig {
 
 export const TESTNET_TOKENS: Partial<Record<ChainId, Record<string, string>>> = {
   tron: {
-    // Shasta testnet - these may need to be deployed or found
-    usdt: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs', // Example test token
-  },
-  ethereum: {
-    // Sepolia testnet
-    usdt: '0x7169D38820dfd117C3FA1f22a697dBA58d90BA06',
-    usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+    // Shasta testnet
+    usdt: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs',
   },
 };
 

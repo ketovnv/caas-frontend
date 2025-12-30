@@ -18,4 +18,5 @@ export { ReactIcon } from './ReactIcon';
 export { BunIcon } from './BunIcon';
 export { TronIcon } from './TronIcon';
 export { UsdtIcon } from './UsdtIcon';
+export { UsdtTronIcon } from './UsdtTronIcon';
 export { UsdcIcon } from './UsdcIcon';

@@ -31,7 +31,6 @@ export {
     type RainbowButtonProps,
     AnimatedInput,
     type AnimatedInputProps,
-    type AnimatedInputRef,
     AnimatedInputController,
     // Legacy (deprecated)
     SpotlightInput,

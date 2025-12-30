@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { useTrail, animated } from '@react-spring/web';
 import { observer } from 'mobx-react-lite';
-import { AnimatedInput, type AnimatedInputRef, RippleButton } from 'shared/ui';
+import { AnimatedInput, AnimatedInputController, RippleButton } from 'shared/ui';
 import { themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
 import { AMOUNT_INPUT_PROPS, ADDRESS_INPUT_PROPS } from '../config';
@@ -12,7 +12,7 @@ import { walletStore } from '../model/wallet.store';
 // ============================================================================
 
 interface TransactionFormProps {
-  onSend?: (amount: string, address: string) => void;
+  onSend?: (amount: string, address: string) => Promise<string>;
   /** Trigger entrance animation */
   isActive?: boolean;
   className?: string;
@@ -38,13 +38,28 @@ export const TransactionForm = observer(function TransactionForm({
   isActive = true,
   className,
 }: TransactionFormProps) {
-  const amountRef = useRef<AnimatedInputRef>(null);
-  const addressRef = useRef<AnimatedInputRef>(null);
+  // Controllers for imperative input control
+  const amountCtrlRef = useRef<AnimatedInputController | null>(null);
+  if (!amountCtrlRef.current) {
+    amountCtrlRef.current = new AnimatedInputController({
+      ...AMOUNT_INPUT_PROPS,
+    });
+  }
+  const amountCtrl = amountCtrlRef.current;
+
+  const addressCtrlRef = useRef<AnimatedInputController | null>(null);
+  if (!addressCtrlRef.current) {
+    addressCtrlRef.current = new AnimatedInputController({
+      ...ADDRESS_INPUT_PROPS,
+    });
+  }
+  const addressCtrl = addressCtrlRef.current;
 
   const [amount, setAmount] = useState('');
   const [address, setAddress] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   // Get balance from store
   const balance = walletStore.currentTokenBalance;
@@ -98,22 +113,23 @@ export const TransactionForm = observer(function TransactionForm({
   }, [balanceNum]);
 
   const handleSend = async () => {
-    if (!canSend) return;
+    if (!canSend || !onSend) return;
 
     setIsSending(true);
     setError(null);
+    setTxHash(null);
 
     try {
-      // Vanish effect on both inputs
-      await Promise.all([
-        amountRef.current?.submit(),
-        addressRef.current?.submit(),
-      ]);
+      // Send transaction and wait for result
+      const hash = await onSend(amount, address);
 
-      onSend?.(amount, address);
-
+      setTxHash(hash);
       setAmount('');
       setAddress('');
+
+      // Clear input controllers
+      amountCtrl.setValue('', true);
+      addressCtrl.setValue('', false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Transaction failed');
     } finally {
@@ -128,38 +144,38 @@ export const TransactionForm = observer(function TransactionForm({
   return (
     <div className={cn('w-full flex flex-col gap-6', className)}>
       {/* Balance Card */}
-      <animated.div
-        style={{
-          opacity: trail[0]?.opacity,
-          transform: trail[0]?.y.to(y => `translateY(${y}px)`),
-        }}
-        className={cn(
-          'p-6 rounded-3xl',
-          'bg-zinc-900/60 backdrop-blur-md',
-          'border border-zinc-800/50'
-        )}
-      >
-        <animated.p
-          style={themeStore.grayStyle}
-          className="text-sm mb-2"
-        >
-          Available Balance
-        </animated.p>
-        <div className="flex items-baseline gap-2">
-          <animated.span
-            style={themeStore.accentStyle}
-            className="text-3xl font-bold tabular-nums"
-          >
-            {balance?.isLoading ? '...' : balanceStr}
-          </animated.span>
-          <animated.span
-            style={themeStore.colorStyle}
-            className="text-xl font-medium"
-          >
-            {walletStore.currentSymbol}
-          </animated.span>
-        </div>
-      </animated.div>
+      {/*<animated.div*/}
+      {/*  style={{*/}
+      {/*    opacity: trail[0]?.opacity,*/}
+      {/*    transform: trail[0]?.y.to(y => `translateY(${y}px)`),*/}
+      {/*  }}*/}
+      {/*  className={cn(*/}
+      {/*    'p-6 rounded-3xl',*/}
+      {/*    'bg-zinc-900/60 backdrop-blur-md',*/}
+      {/*    'border border-zinc-800/50'*/}
+      {/*  )}*/}
+      {/*>*/}
+      {/*  <animated.p*/}
+      {/*    style={themeStore.grayStyle}*/}
+      {/*    className="text-sm mb-2"*/}
+      {/*  >*/}
+      {/*    Available Balance*/}
+      {/*  </animated.p>*/}
+      {/*  <div className="flex items-baseline gap-2">*/}
+      {/*    <animated.span*/}
+      {/*      style={themeStore.accentStyle}*/}
+      {/*      className="text-3xl font-bold tabular-nums"*/}
+      {/*    >*/}
+      {/*      {balance?.isLoading ? '...' : balanceStr}*/}
+      {/*    </animated.span>*/}
+      {/*    <animated.span*/}
+      {/*      style={themeStore.colorStyle}*/}
+      {/*      className="text-xl font-medium"*/}
+      {/*    >*/}
+      {/*      {walletStore.currentSymbol}*/}
+      {/*    </animated.span>*/}
+      {/*  </div>*/}
+      {/*</animated.div>*/}
 
       {/* Amount Input */}
       <animated.div
@@ -176,10 +192,10 @@ export const TransactionForm = observer(function TransactionForm({
           Amount
         </animated.label>
         <AnimatedInput
-          ref={amountRef}
-          {...AMOUNT_INPUT_PROPS}
+          controller={amountCtrl}
           type="number"
-          onSubmit={handleAmountChange}
+          onChange={handleAmountChange}
+          showSubmitButton={false}
           className="text-xl"
         />
 
@@ -221,9 +237,9 @@ export const TransactionForm = observer(function TransactionForm({
           Recipient Address
         </animated.label>
         <AnimatedInput
-          ref={addressRef}
-          {...ADDRESS_INPUT_PROPS}
-          onSubmit={setAddress}
+          controller={addressCtrl}
+          onChange={setAddress}
+          showSubmitButton={false}
         />
       </animated.div>
 
@@ -241,6 +257,33 @@ export const TransactionForm = observer(function TransactionForm({
           )}
         >
           {error}
+        </animated.div>
+      )}
+
+      {/* Success Display */}
+      {txHash && (
+        <animated.div
+          style={{
+            opacity: trail[3]?.opacity,
+            transform: trail[3]?.y.to(y => `translateY(${y}px)`),
+          }}
+          className={cn(
+            'p-4 rounded-2xl',
+            'bg-green-500/10 border border-green-500/20'
+          )}
+        >
+          <p className="text-green-400 text-sm text-center mb-2">
+            Транзакция отправлена!
+          </p>
+          <p className="text-zinc-400 text-xs text-center break-all font-mono">
+            {txHash.length > 20 ? `${txHash.slice(0, 20)}...${txHash.slice(-10)}` : txHash}
+          </p>
+          <button
+            onClick={() => setTxHash(null)}
+            className="mt-2 w-full text-green-400 hover:text-green-300 text-xs"
+          >
+            Закрыть
+          </button>
         </animated.div>
       )}
 

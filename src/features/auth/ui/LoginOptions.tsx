@@ -4,7 +4,7 @@ import { useTrail, animated, config, Controller } from '@react-spring/web';
 import { cn } from 'shared/lib';
 import { GlowingEffect } from 'shared/ui/animated/glow/GlowingEffect';
 import { authStore } from '../model/auth.store';
-import { IconButtonController } from './IconButtonController';
+import { IconButtonController } from '../model/IconButtonController.ts';
 import { panelSpring, INPUT_PANEL_HIDDEN, INPUT_PANEL_VISIBLE, type InputPanelState } from '../config';
 import type { LoginProvider } from '@/shared/lib/web3auth';
 
@@ -36,7 +36,7 @@ interface LoginOptionsProps {
 
 const LoginCard = observer(function LoginCard({
   icon,
-  label,
+  label: _label,
   onClick,
   loading,
   disabled,
@@ -128,10 +128,10 @@ const LoginCard = observer(function LoginCard({
       {/* Icon */}
       <span className="relative z-10 transition-transform duration-200 group-hover:scale-110">
         {loading ? (
-          <svg className="w-12 h-12 animate-spin text-zinc-400" viewBox="0 0 24 24">
+          <svg className="w-24 h-24 animate-spin text-zinc-400" viewBox="0 0 32 32">
             <circle
               className="opacity-25"
-              cx="12" cy="12" r="10"
+              cx="24" cy="24" r="10"
               stroke="currentColor"
               strokeWidth="3"
               fill="none"
@@ -148,13 +148,13 @@ const LoginCard = observer(function LoginCard({
       </span>
 
       {/* Label */}
-      <span className={cn(
-        'relative z-10 text-sm font-medium',
-        'text-zinc-400 group-hover:text-zinc-200',
-        'transition-colors duration-200'
-      )}>
-        {label}
-      </span>
+      {/*<span className={cn(*/}
+      {/*  'relative z-10 text-sm font-medium',*/}
+      {/*  'text-zinc-400 group-hover:text-zinc-200',*/}
+      {/*  'transition-colors duration-200'*/}
+      {/*)}>*/}
+      {/*  {label}*/}
+      {/*</span>*/}
 
       {/* Shine overlay */}
       <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
@@ -229,20 +229,20 @@ export const LoginOptions = observer(function LoginOptions({ className }: LoginO
 
   // All login options
   const socialOptions = [
-    { id: 'google', icon: <Google className="w-12 h-12" />, label: 'Google', provider: 'google' as LoginProvider, color: '#4285F4' },
-    { id: 'facebook', icon: <Facebook className="w-12 h-12" />, label: 'Facebook', provider: 'facebook' as LoginProvider, color: '#1877F2' },
-    { id: 'twitter', icon: <Twitter className="w-12 h-12" />, label: 'X', provider: 'twitter' as LoginProvider, color: '#fff' },
-    { id: 'discord', icon: <Discord className="w-12 h-12" />, label: 'Discord', provider: 'discord' as LoginProvider, color: '#5865F2' },
+    { id: 'google', icon: <Google className="w-24 h-24" />, label: 'Google', provider: 'google' as LoginProvider, color: '#4285F4' },
+    { id: 'facebook', icon: <Facebook className="w-24 h-24" />, label: 'Facebook', provider: 'facebook' as LoginProvider, color: '#1877F2' },
+    { id: 'twitter', icon: <Twitter className="w-24 h-24" />, label: 'X', provider: 'twitter' as LoginProvider, color: '#fff' },
+    { id: 'discord', icon: <Discord className="w-24 h-24" />, label: 'Discord', provider: 'discord' as LoginProvider, color: '#5865F2' },
   ];
 
   const walletOptions = [
-    { id: 'metamask', icon: <Metamask className="w-12 h-12" />, label: 'MetaMask', color: '#E2761B' },
-    { id: 'tronlink', icon: <TronLink className="w-12 h-12" />, label: 'TronLink', color: '#FF060A' },
+    { id: 'metamask', icon: <Metamask className="w-24 h-24" />, label: 'MetaMask', color: '#E2761B' },
+    { id: 'tronlink', icon: <TronLink className="w-24 h-24" />, label: 'TronLink', color: '#FF060A' },
   ];
 
   const passwordlessOptions = [
-    { id: 'email', icon: <Email className="w-12 h-12 text-violet-400" />, label: 'Email', color: '#8B5CF6' },
-    { id: 'phone', icon: <Phone className="w-12 h-12 text-emerald-400" />, label: 'Phone', color: '#10B981' },
+    { id: 'email', icon: <Email className="w-24 h-24 text-violet-400" />, label: 'Email', color: '#8B5CF6' },
+    { id: 'phone', icon: <Phone className="w-24 h-24 text-emerald-400" />, label: 'Phone', color: '#10B981' },
   ];
 
   // Staggered entrance animations

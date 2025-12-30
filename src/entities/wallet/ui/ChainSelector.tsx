@@ -8,7 +8,7 @@ import { themeStore } from 'shared/model';
 import { ChainButtonController } from '../model/ChainSelectorController.ts';
 
 // ============================================================================
-// Chain Selector - Toggle between Tron and Ethereum
+// Chain Selector - Currently Tron only
 // ============================================================================
 
 interface ChainSelectorProps {
@@ -18,7 +18,8 @@ interface ChainSelectorProps {
 export const ChainSelector = observer(function ChainSelector({
   className,
 }: ChainSelectorProps) {
-  const chains: ChainId[] = ['tron', 'ethereum'];
+  // Single chain mode - Tron only
+  const chains = Object.keys(CHAIN_CONFIGS) as ChainId[];
 
   return (
     <div className={`flex gap-2 ${className || ''}`}>

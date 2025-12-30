@@ -2,41 +2,15 @@ import type { Route, RouteConfig, TransitionConfig, TransitionType } from './typ
 
 // Route configurations
 export const routeConfigs: Record<Route, RouteConfig> = {
-  // Public routes
+  // Main page with wallet
   home: {
     requiresAuth: false,
     title: 'CaaS - Home',
     displayTitle: 'CaaS Platform',
     subtitle: 'Crypto as a Service',
   },
-  showcase: {
-    requiresAuth: false,
-    title: 'CaaS - Components',
-    displayTitle: 'Components',
-    subtitle: 'UI Component Library',
-  },
-  textures: {
-    requiresAuth: false,
-    title: 'CaaS - Textures',
-    displayTitle: 'Textures',
-    subtitle: 'Visual Effects Gallery',
-  },
 
-  // Protected routes
-  wallet: {
-    requiresAuth: true,
-    redirectTo: 'home',
-    title: 'CaaS - Wallet',
-    displayTitle: 'Wallet',
-    subtitle: 'Manage your crypto assets',
-  },
-  exchange: {
-    requiresAuth: true,
-    redirectTo: 'home',
-    title: 'CaaS - Exchange',
-    displayTitle: 'Exchange',
-    subtitle: 'Trade & Swap',
-  },
+  // Settings
   settings: {
     requiresAuth: false,
     title: 'CaaS - Settings',
@@ -59,10 +33,6 @@ export const routeConfigs: Record<Route, RouteConfig> = {
  */
 export const NAVIGATION_ORDER: Route[] = [
   'home',
-  'showcase',
-  'textures',
-  'wallet',
-  'exchange',
   'settings',
 ];
 

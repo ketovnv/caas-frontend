@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
-import { walletStore } from '../model/wallet.store';
+import { walletStore } from 'entities/wallet';
 import { TOKENS } from '../config/tokens';
 import type { TokenId } from '../model/types';
 import { createAssetKey } from '../model/types';

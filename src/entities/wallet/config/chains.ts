@@ -15,21 +15,9 @@ export const TRON_CONFIG: ChainConfig = {
   faucetUrl: 'https://shasta.tronex.io/',
 };
 
-/** Ethereum Sepolia Testnet */
-export const ETHEREUM_CONFIG: ChainConfig = {
-  id: 'ethereum',
-  name: 'Ethereum',
-  symbol: 'ETH',
-  decimals: 18, // 1 ETH = 10^18 wei
-  rpcUrl: 'https://rpc.sepolia.org',
-  explorerUrl: 'https://sepolia.etherscan.io',
-  faucetUrl: 'https://sepoliafaucet.com',
-};
-
 /** All supported chains */
 export const CHAIN_CONFIGS: Record<ChainId, ChainConfig> = {
   tron: TRON_CONFIG,
-  ethereum: ETHEREUM_CONFIG,
 };
 
 /** Default chain */

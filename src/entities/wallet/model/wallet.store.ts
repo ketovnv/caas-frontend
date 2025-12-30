@@ -18,13 +18,6 @@ import {
   getTrc20Balance,
   sendTrc20,
 } from 'features/auth';
-import {
-  getEvmAccount,
-  getEvmBalance,
-  sendEvmTransaction,
-  getErc20Balance,
-  sendErc20,
-} from '../lib/evmRpc';
 import { web3AuthService } from 'shared/lib/web3auth';
 import { hapticsStore } from 'shared/lib/haptics';
 
@@ -170,7 +163,16 @@ class WalletStore {
 
   /** Fetch balances for all chains and tokens */
   fetchBalances = async () => {
-    if (!authStore.isConnected) return;
+    console.log('[WalletStore] fetchBalances called', {
+      isConnected: authStore.isConnected,
+      walletType: authStore.walletType,
+      isRefreshing: this.isRefreshing,
+    });
+
+    if (!authStore.isConnected) {
+      console.log('[WalletStore] Not connected, skipping');
+      return;
+    }
 
     // Only Web3Auth has access to private key for both chains
     if (authStore.walletType !== 'web3auth') {
@@ -179,25 +181,20 @@ class WalletStore {
     }
 
     const provider = web3AuthService.provider;
+    console.log('[WalletStore] Provider:', provider ? 'exists' : 'null');
     if (!provider) return;
 
     runInAction(() => {
       this.isRefreshing = true;
     });
 
-    // Fetch native balances in parallel
-    await Promise.all([
-      this.fetchTronBalance(provider),
-      this.fetchEvmBalance(provider),
-    ]);
+    console.log('[WalletStore] Fetching TRX balance...');
+    await this.fetchTronBalance(provider);
+    console.log('[WalletStore] TRX balance done');
 
-    // Fetch token balances
-    await Promise.all([
-      this.fetchTokenBalance(provider, 'tron', 'usdt'),
-      this.fetchTokenBalance(provider, 'tron', 'usdc'),
-      this.fetchTokenBalance(provider, 'ethereum', 'usdt'),
-      this.fetchTokenBalance(provider, 'ethereum', 'usdc'),
-    ]);
+    console.log('[WalletStore] Fetching USDT balance...');
+    await this.fetchTokenBalance(provider, 'tron', 'usdt');
+    console.log('[WalletStore] USDT balance done');
 
     runInAction(() => {
       this.isRefreshing = false;
@@ -246,48 +243,6 @@ class WalletStore {
     }
   };
 
-  /** Fetch EVM balance */
-  private fetchEvmBalance = async (provider: any) => {
-    runInAction(() => {
-      const existing = this.balances.get('ethereum');
-      this.balances.set('ethereum', {
-        chainId: 'ethereum',
-        address: existing?.address || '',
-        balance: existing?.balance || '0',
-        isLoading: true,
-        error: null,
-        lastUpdated: Date.now(),
-      });
-    });
-
-    try {
-      const address = await getEvmAccount(provider);
-      const balance = await getEvmBalance(provider);
-
-      runInAction(() => {
-        this.balances.set('ethereum', {
-          chainId: 'ethereum',
-          address,
-          balance,
-          isLoading: false,
-          error: null,
-          lastUpdated: Date.now(),
-        });
-      });
-    } catch (error) {
-      runInAction(() => {
-        this.balances.set('ethereum', {
-          chainId: 'ethereum',
-          address: '',
-          balance: '0',
-          isLoading: false,
-          error: (error as Error).message,
-          lastUpdated: Date.now(),
-        });
-      });
-    }
-  };
-
   /** Fetch token balance for a specific chain and token */
   private fetchTokenBalance = async (
     provider: any,
@@ -319,13 +274,7 @@ class WalletStore {
     });
 
     try {
-      let balance: string;
-
-      if (chainId === 'tron') {
-        balance = await getTrc20Balance(provider, contractAddress, tokenConfig.decimals);
-      } else {
-        balance = await getErc20Balance(provider, contractAddress, tokenConfig.decimals);
-      }
+      const balance = await getTrc20Balance(provider, contractAddress, tokenConfig.decimals);
 
       runInAction(() => {
         this.tokenBalances.set(key, {
@@ -383,48 +332,26 @@ class WalletStore {
       const tokenConfig = this.currentTokenConfig;
       const contractAddress = getTokenAddress(this.selectedToken, this.selectedChain);
 
-      if (this.selectedChain === 'tron') {
-        // Validate Tron address
-        if (!toAddress.startsWith('T') || toAddress.length !== 34) {
-          throw new Error('Invalid TRON address (must start with T)');
-        }
+      // Validate Tron address
+      if (!toAddress.startsWith('T') || toAddress.length !== 34) {
+        throw new Error('Неверный TRON адрес (должен начинаться с T)');
+      }
 
-        if (this.selectedToken === 'native') {
-          // Native TRX transfer
-          const result = await sendTronTx(provider, toAddress, Number(amount));
-          const parsed = JSON.parse(result);
-          txHash = parsed.txid || parsed.transaction?.txID || result;
-        } else {
-          // TRC-20 transfer
-          if (!contractAddress) throw new Error('Token not available on this chain');
-          txHash = await sendTrc20(
-            provider,
-            contractAddress,
-            toAddress,
-            amount,
-            tokenConfig.decimals
-          );
-        }
+      if (this.selectedToken === 'native') {
+        // Native TRX transfer
+        const result = await sendTronTx(provider, toAddress, Number(amount));
+        const parsed = JSON.parse(result);
+        txHash = parsed.txid || parsed.transaction?.txID || result;
       } else {
-        // Validate EVM address
-        if (!toAddress.startsWith('0x') || toAddress.length !== 42) {
-          throw new Error('Invalid Ethereum address (must start with 0x)');
-        }
-
-        if (this.selectedToken === 'native') {
-          // Native ETH transfer
-          txHash = await sendEvmTransaction(provider, toAddress, amount);
-        } else {
-          // ERC-20 transfer
-          if (!contractAddress) throw new Error('Token not available on this chain');
-          txHash = await sendErc20(
-            provider,
-            contractAddress,
-            toAddress,
-            amount,
-            tokenConfig.decimals
-          );
-        }
+        // TRC-20 transfer (USDT)
+        if (!contractAddress) throw new Error('Токен недоступен');
+        txHash = await sendTrc20(
+          provider,
+          contractAddress,
+          toAddress,
+          amount,
+          tokenConfig.decimals
+        );
       }
 
       // Record transaction

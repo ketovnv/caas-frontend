@@ -1,24 +1,17 @@
 import { TronWeb } from 'tronweb';
-import type { IProvider } from '@web3auth/base';
+import type { IProvider } from '@/shared/lib/web3auth';
 
 const TRON_RPC_URL = 'https://api.shasta.trongrid.io';
 
 async function getPrivateKey(provider: IProvider): Promise<string> {
-  // Try different method names (varies by Web3Auth version/adapter)
-  const methods = ['eth_private_key', 'private_key'];
-
-  for (const method of methods) {
-    try {
-      const privateKey = await provider.request<never, string>({ method });
-      if (privateKey) {
-        return privateKey;
-      }
-    } catch {
-      // Try next method
+  try {
+    const privateKey = await provider.request<never, string>({ method: 'private_key' });
+    if (privateKey) {
+      return privateKey;
     }
+  } catch (error) {
+    console.warn('[TronRpc] getPrivateKey failed:', error);
   }
-
-  console.warn('[TronRpc] getPrivateKey: no supported method found');
   return '';
 }
 
@@ -37,13 +30,18 @@ export async function getTronAccount(provider: IProvider): Promise<string> {
 }
 
 export async function getTronBalance(provider: IProvider): Promise<string> {
+  console.log('[TronRpc] getTronBalance called');
   const privateKey = await getPrivateKey(provider);
+  console.log('[TronRpc] privateKey:', privateKey ? 'exists' : 'empty');
   const tronWeb = getTronWeb(privateKey);
   const address = tronWeb.address.fromPrivateKey(privateKey);
+  console.log('[TronRpc] address:', address);
 
   if (!address) return '0';
 
+  console.log('[TronRpc] Fetching balance from RPC...');
   const balance = await tronWeb.trx.getBalance(address);
+  console.log('[TronRpc] Raw balance:', balance);
   return tronWeb.fromSun(balance).toString();
 }
 

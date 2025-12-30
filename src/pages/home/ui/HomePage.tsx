@@ -1,37 +1,118 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
-import { animated } from '@react-spring/web';
+import { useSpring, animated, config } from '@react-spring/web';
 import { LoginButton, authStore } from 'features/auth';
-import {
-  BalanceDisplay,
-  ChainSelector,
-  TokenSelector,
-  TransactionForm,
-  NotesSection,
-  StatsSection,
-  walletStore,
-} from 'features/wallet';
-import {
-  PageLayout,
-  MorphingText,
-  AnimatedTabs,
-  Card,
-  CardContent,
-  CardHeader,
-  type Tab,
-} from 'shared/ui';
+import { WalletCard, walletStore, TransactionForm } from 'entities/wallet';
+import type { TokenId } from 'entities/wallet';
+import { PageLayout } from 'shared/ui';
 import { themeStore } from 'shared/model';
-import { walletPageController } from 'pages/wallet/model';
-import { TAB_LABELS, type WalletTabId } from 'pages/wallet/config';
 
 // ============================================================================
-// Home Page - Auth or Wallet Dashboard
+// Animated Address Component
+// ============================================================================
+
+interface AnimatedAddressProps {
+  address: string;
+  className?: string;
+}
+
+const AnimatedAddress = observer(function AnimatedAddress({
+  address,
+  className
+}: AnimatedAddressProps) {
+  const [displayAddress, setDisplayAddress] = useState(address);
+
+  const spring = useSpring({
+    opacity: 1,
+    y: 0,
+    from: { opacity: 0, y: -10 },
+    reset: address !== displayAddress,
+    onRest: () => setDisplayAddress(address),
+    config: config.gentle,
+  });
+
+  // Shorten address for display
+  const shortAddress = address
+    ? `${address.slice(0, 8)}...${address.slice(-6)}`
+    : '';
+
+  const copyToClipboard = useCallback(() => {
+    if (address) {
+      navigator.clipboard.writeText(address);
+    }
+  }, [address]);
+
+  if (!address) return null;
+
+  return (
+    <animated.button
+      style={spring}
+      onClick={copyToClipboard}
+      className={`
+        flex items-center gap-2 px-4 py-2 rounded-xl
+        bg-zinc-800/50 border border-zinc-700/50
+        hover:bg-zinc-700/50 hover:border-zinc-600/50
+        transition-colors group
+        ${className}
+      `}
+    >
+      <span className="font-mono text-sm text-zinc-400 group-hover:text-zinc-300">
+        {shortAddress}
+      </span>
+      <svg
+        className="w-4 h-4 text-zinc-500 group-hover:text-zinc-400 transition-colors"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+        />
+      </svg>
+    </animated.button>
+  );
+});
+
+// ============================================================================
+// Currency Label Component
+// ============================================================================
+
+interface CurrencyLabelProps {
+  currency: TokenId;
+}
+
+const CurrencyLabel = observer(function CurrencyLabel({ currency }: CurrencyLabelProps) {
+  const spring = useSpring({
+    opacity: 1,
+    scale: 1,
+    from: { opacity: 0, scale: 0.8 },
+    reset: true,
+    config: config.wobbly,
+  });
+
+  const label = currency === 'native' ? 'TRX' : 'USDT';
+  const color = currency === 'native' ? 'text-red-400' : 'text-emerald-400';
+
+  return (
+    <animated.span
+      style={spring}
+      className={`text-lg font-semibold ${color}`}
+    >
+      {label}
+    </animated.span>
+  );
+});
+
+// ============================================================================
+// Home Page - Simplified with WalletCard
 // ============================================================================
 
 export const HomePage = observer(function HomePage() {
   const { isConnected, status } = authStore;
-  const ctrl = walletPageController;
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<TokenId>('native');
 
   // Fetch balances when connected
   useEffect(() => {
@@ -40,20 +121,32 @@ export const HomePage = observer(function HomePage() {
     }
   }, [isConnected]);
 
-  // Setup ResizeObserver for tab content
-  useEffect(() => {
-    if (isConnected) {
-      ctrl.observeElement(contentRef.current);
-      return () => ctrl.disconnectObserver();
-    }
-  }, [isConnected, ctrl]);
+  // Handle currency change from WalletCard
+  const handleCurrencyChange = useCallback((currency: TokenId) => {
+    setSelectedCurrency(currency);
+  }, []);
 
-  // Loading state - simple spinner without text
+  // Handle send transaction
+  const handleSend = useCallback(async (amount: string, address: string): Promise<string> => {
+    try {
+      const txHash = await walletStore.sendTransaction(address, amount);
+      console.log('Transaction sent:', txHash);
+      return txHash;
+    } catch (error) {
+      console.error('Transaction failed:', error);
+      throw error;
+    }
+  }, []);
+
+  // Get current address
+  const currentAddress = walletStore.balances.get('tron')?.address || '';
+
+  // Loading state
   if (status === 'initializing') {
     return (
       <PageLayout centerContent>
         <div className="flex items-center justify-center">
-          <svg className="w-8 h-8 animate-spin text-violet-500" viewBox="0 0 24 24">
+          <svg className="w-10 h-10 animate-spin text-violet-500" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
               cx="12" cy="12" r="10"
@@ -72,97 +165,44 @@ export const HomePage = observer(function HomePage() {
     );
   }
 
-  // Connected - show dashboard with tabs
+  // Connected - show wallet card
   if (isConnected) {
-    // Build tabs array
-    const tabs: Tab[] = [
-      {
-        id: 'send',
-        label: TAB_LABELS.send,
-        content: (
-          <TransactionForm
-            onSend={ctrl.handleSend}
-            isActive={ctrl.activeTab === 'send'}
-          />
-        ),
-      },
-      {
-        id: 'notes',
-        label: TAB_LABELS.notes,
-        content: <NotesSection maxNotes={10} isActive={ctrl.activeTab === 'notes'} />,
-      },
-      {
-        id: 'stats',
-        label: TAB_LABELS.stats,
-        content: <StatsSection isActive={ctrl.activeTab === 'stats'} />,
-      },
-    ];
-
-    const handleTabChange = (tabId: string) => {
-      ctrl.setActiveTab(tabId as WalletTabId);
-    };
-
     return (
-      <PageLayout className="gap-4 p-4 sm:p-8">
-        {/* Chain & Token Selectors */}
-        <div className="flex flex-col gap-3 w-full max-w-sm mx-auto">
-          <ChainSelector className="justify-center" />
-          <TokenSelector className="justify-center" />
-        </div>
+      <PageLayout className="items-center justify-center gap-6 p-4 sm:p-8">
+        {/* Address */}
+        <AnimatedAddress address={currentAddress} />
 
-        {/* Balance Display */}
-        <BalanceDisplay showAddress className="py-6" />
-
-        {/* Tabs outside the card */}
-        <AnimatedTabs
-          tabs={tabs}
-          activeTab={ctrl.activeTab}
-          onTabChange={handleTabChange}
-          transition="fade"
-          className="w-full"
-          tabListClass="justify-center border-0"
-          contentClass="hidden"
+        {/* Wallet Card */}
+        <WalletCard
+          onCurrencyChange={handleCurrencyChange}
+          className="my-4"
         />
 
-        {/* Card with content only */}
-        <Card
-          style={themeStore.backgroundStyle as unknown as React.CSSProperties}
-          className="w-full border-0"
-        >
-          <CardHeader>
-            <MorphingText
-              text={ctrl.activeTitle}
-              morphTime={0.8}
-              coolDownTime={0.2}
-              className="h-7 sm:h-8 text-lg sm:text-xl"
-            />
-          </CardHeader>
-          <CardContent>
-            {/* Animated height container */}
-            <animated.div style={ctrl.heightStyle}>
-              {/* Content measurement wrapper */}
-              <div ref={contentRef}>
-                <AnimatedTabs
-                  tabs={tabs}
-                  activeTab={ctrl.activeTab}
-                  onTabChange={handleTabChange}
-                  transition="fade"
-                  className="w-full"
-                  tabListClass="hidden"
-                />
-              </div>
-            </animated.div>
-          </CardContent>
-        </Card>
+        {/* Current currency indicator */}
+        <div className="flex items-center gap-2 text-zinc-500 text-sm">
+          <span>Выбрано:</span>
+          <CurrencyLabel currency={selectedCurrency} />
+        </div>
 
-        {/* Send Error */}
+        {/* Send Form */}
+        <animated.div
+          style={themeStore.backgroundStyle as unknown as React.CSSProperties}
+          className="w-full max-w-sm rounded-2xl border border-zinc-800/50 p-4"
+        >
+          <TransactionForm
+            onSend={handleSend}
+            isActive={true}
+          />
+        </animated.div>
+
+        {/* Error */}
         {walletStore.sendError && (
-          <div className="w-full p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+          <div className="w-full max-w-sm p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
             <div className="flex items-center justify-between">
               <p className="text-red-400 text-sm">{walletStore.sendError}</p>
               <button
                 onClick={() => walletStore.clearSendError()}
-                className="text-red-400 hover:text-red-300"
+                className="text-red-400 hover:text-red-300 ml-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -172,20 +212,18 @@ export const HomePage = observer(function HomePage() {
           </div>
         )}
 
-        {/* Disconnect Button */}
-        <div className="mt-4 flex justify-center">
-          <button
-            onClick={() => authStore.disconnect()}
-            className="text-zinc-500 text-sm hover:text-zinc-300 transition-colors"
-          >
-            Отключиться
-          </button>
-        </div>
+        {/* Disconnect */}
+        <button
+          onClick={() => authStore.disconnect()}
+          className="text-zinc-500 text-sm hover:text-zinc-300 transition-colors mt-4"
+        >
+          Отключиться
+        </button>
       </PageLayout>
     );
   }
 
-  // Not connected - show login options
+  // Not connected - show login
   return (
     <PageLayout centerContent>
       <LoginButton />

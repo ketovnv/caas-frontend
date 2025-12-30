@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CaaS (Crypto-as-a-Service) frontend - a platform for cryptocurrency operations. Currently implements:
 - Web3Auth social login (Google, Facebook, Twitter, Discord, Email, SMS)
-- Multi-chain wallet (Tron + Ethereum) with native and token transfers
+- Tron wallet with TRX and USDT (TRC-20) support
 - Animated UI component library built on React Spring
+- Minimal two-page UI: Home (with WalletCard) and Settings
 
 ## Tech Stack
 
@@ -18,7 +19,7 @@ CaaS (Crypto-as-a-Service) frontend - a platform for cryptocurrency operations. 
 - **Animation**: React Spring (@react-spring/web) + Motion
 - **State**: MobX (stores + makeAutoObservable)
 - **Auth**: Web3Auth No-Modal SDK
-- **Blockchain**: TronWeb (Shasta testnet), Ethers.js (Sepolia testnet)
+- **Blockchain**: TronWeb (Shasta testnet)
 - **Mobile**: Capacitor (Android target)
 
 ## Development Commands
@@ -33,6 +34,11 @@ bun run typecheck        # TypeScript check (tsc --noEmit)
 bun run test             # Run tests (vitest)
 bun run test --watch     # Watch mode
 bun run test path/to/file.test.ts  # Single file
+
+# Capacitor (mobile)
+bunx cap sync            # Sync web assets to native projects
+bunx cap run android     # Run on Android device/emulator
+bunx cap open android    # Open Android project in Android Studio
 ```
 
 ## Architecture (Feature-Sliced Design)
@@ -42,10 +48,10 @@ Strict layer imports: `app → pages → widgets → features → entities → s
 ```
 src/
 ├── app/              # App entry, providers (Web3Auth, Router, ErrorBoundary)
-├── pages/            # Route components (home, showcase, wallet, exchange, settings)
+├── pages/            # Route components (home, settings, not-found)
 ├── widgets/          # Complex UI blocks (global-header, nav-links)
 ├── features/         # User interactions (auth, error)
-├── entities/         # Business entities (wallet)
+├── entities/         # Business entities (wallet with WalletCard)
 └── shared/           # Reusable UI kit and utilities
     ├── ui/animated/  # React Spring animation components
     ├── lib/          # cn(), gradient utilities, React Spring re-exports
@@ -108,11 +114,18 @@ VITE_WEB3AUTH_CLIENT_ID=...  # Required for Web3Auth (Sapphire Devnet)
 - `shared/lib/reown/` - Reown AppKit integration for WalletConnect
 - Supports MetaMask (`shared/lib/metamask/`) and TronLink (`shared/lib/tronlink/`)
 
-### Multi-Chain Wallet (`entities/wallet/`)
+### Tron Wallet (`entities/wallet/`)
 - `model/wallet.store.ts` - MobX store for balances, tokens, transactions
-- `lib/evmRpc.ts` - Ethereum RPC helpers via ethers.js (Sepolia)
-- `config/chains.ts` - Chain configs (Tron, Ethereum)
-- `config/tokens.ts` - Token registry (USDT, USDC with per-chain contracts)
+- `model/types.ts` - Types: `ChainId = 'tron'`, `TokenId = 'native' | 'usdt'`
+- `ui/WalletCard.tsx` - Flippable card showing TRX (front) / USDT (back)
+- `ui/TransactionForm.tsx` - Send transaction form
+- `config/chains.ts` - Tron chain config (Shasta testnet)
+- `config/tokens.ts` - USDT TRC-20 token config
+
+### WalletCard Interaction
+- **Desktop**: Hover to preview flip, click to lock, mouse leave returns if unlocked
+- **Mobile**: Tap to toggle between TRX and USDT sides
+- Currency selection syncs with `walletStore.selectedToken`
 
 ### Tron Integration
 - RPC helpers in `features/auth/lib/tronRpc.ts` (Shasta testnet)
@@ -208,8 +221,8 @@ export class BalanceDisplayController {
 - `ColorSpring` — один OKLCH цвет с анимацией (`shared/lib/gradient.ts`)
 - `GradientSpring` — 4-цветный градиент (radial/linear/conic)
 - `DynamicColorArraySpring` — массив произвольного числа цветов
-- `BalanceDisplayController` — баланс с trail-анимацией (`entities/wallet/`)
-- `ChainSelectorController`, `TokenSelectorController` — селекторы
+- `IconSpring` — анимированные SVG иконки с hover/press состояниями
+- `CurrencyListController` — список валют с анимацией (`entities/wallet/`)
 
 ### Принципы
 
@@ -222,10 +235,10 @@ export class BalanceDisplayController {
 
 ## Routing (`app/router/`)
 
-Page transitions use swipe-based navigation with configurable animation types:
-- `NAVIGATION_ORDER` defines swipe order: home → showcase → textures → wallet → exchange → settings
+Minimal two-page routing with swipe-based navigation:
+- `NAVIGATION_ORDER`: home → settings
 - `getTransitionType()` returns `slide-left`, `slide-right`, or `scale` based on distance
-- Protected routes (`wallet`, `exchange`) redirect to `home` when unauthenticated
+- Settings accessed via gear icon in header (no navbar)
 
 ## Testing
 

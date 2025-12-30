@@ -72,8 +72,9 @@ class ReownService {
   private async _doInit(): Promise<void> {
     const projectId = import.meta.env.VITE_REOWN_PROJECT_ID;
 
-    if (!projectId) {
-      console.warn('[Reown] ⚠️ Missing VITE_REOWN_PROJECT_ID - Reown disabled');
+    // Validate project ID exists and looks valid (alphanumeric, 32 chars)
+    if (!projectId || !/^[a-f0-9]{32}$/i.test(projectId)) {
+      // Silent - Reown is optional
       this._initFailed = true;
       return;
     }
@@ -217,7 +218,9 @@ class ReownService {
   }
 
   get isAvailable(): boolean {
-    return !!import.meta.env.VITE_REOWN_PROJECT_ID && !this._initFailed;
+    const projectId = import.meta.env.VITE_REOWN_PROJECT_ID;
+    // Valid Reown project ID: 32 hex characters
+    return /^[a-f0-9]{32}$/i.test(projectId ?? '') && !this._initFailed;
   }
 
   get state(): ReownState {

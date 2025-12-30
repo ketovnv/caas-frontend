@@ -8,7 +8,7 @@ import { themeStore } from 'shared/model';
 // Types
 // ============================================================================
 
-interface UsdtIconProps {
+interface UsdtTronIconProps {
   className?: string;
   size?: number | string;
   isActive?: boolean;
@@ -16,16 +16,16 @@ interface UsdtIconProps {
 }
 
 // ============================================================================
-// Color Presets
+// Color Presets (Tron-inspired teal/green)
 // ============================================================================
 
-const USDT_COLORS = {
+const USDT_TRON_COLORS = {
   bg: {
-    default: [0.6, 0.18, 165] as OklchTuple,   // Tether green
-    active: [0.7, 0.22, 165] as OklchTuple,
+    default: [0.55, 0.12, 175] as OklchTuple,   // Tron teal
+    active: [0.65, 0.15, 175] as OklchTuple,
   },
   text: {
-    default: [0.99, 0.01, 0] as OklchTuple,    // White
+    default: [0.99, 0.01, 0] as OklchTuple,     // White
   },
 };
 
@@ -33,22 +33,22 @@ const USDT_COLORS = {
 // Component
 // ============================================================================
 
-export const UsdtIcon = observer(function UsdtIcon({
+export const UsdtTronIcon = observer(function UsdtTronIcon({
   className,
   size = '1em',
   isActive = false,
   animated: enableAnimation = true,
-}: UsdtIconProps) {
+}: UsdtTronIconProps) {
   const bgRef = useRef<IconSpring | null>(null);
   const textRef = useRef<IconSpring | null>(null);
 
   if (!bgRef.current) {
     bgRef.current = new IconSpring(
-      { fill: isActive ? USDT_COLORS.bg.active : USDT_COLORS.bg.default },
+      { fill: isActive ? USDT_TRON_COLORS.bg.active : USDT_TRON_COLORS.bg.default },
       themeStore.springConfig
     );
     textRef.current = new IconSpring(
-      { fill: USDT_COLORS.text.default },
+      { fill: USDT_TRON_COLORS.text.default },
       themeStore.springConfig
     );
   }
@@ -57,7 +57,7 @@ export const UsdtIcon = observer(function UsdtIcon({
   const text = textRef.current!;
 
   useEffect(() => {
-    bg.fillTo(isActive ? USDT_COLORS.bg.active : USDT_COLORS.bg.default);
+    bg.fillTo(isActive ? USDT_TRON_COLORS.bg.active : USDT_TRON_COLORS.bg.default);
     if (isActive) bg.scaleTo(1.1);
     else bg.scaleTo(1);
   }, [isActive, bg]);
@@ -70,19 +70,19 @@ export const UsdtIcon = observer(function UsdtIcon({
   const handleMouseEnter = () => {
     if (!enableAnimation || isActive) return;
     bg.scaleTo(1.1);
-    bg.fillTo(USDT_COLORS.bg.active);
+    bg.fillTo(USDT_TRON_COLORS.bg.active);
   };
 
   const handleMouseLeave = () => {
     if (!enableAnimation || isActive) return;
     bg.scaleTo(1);
-    bg.fillTo(USDT_COLORS.bg.default);
+    bg.fillTo(USDT_TRON_COLORS.bg.default);
   };
 
   return (
     <animated.svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 32 32"
+      viewBox="0 0 24 24"
       width={size}
       height={size}
       className={className}
@@ -90,22 +90,17 @@ export const UsdtIcon = observer(function UsdtIcon({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <g fill="none" fillRule="evenodd">
-        {/* Background circle */}
-        <animated.circle
-          cx="16"
-          cy="16"
-          r="16"
-          style={{ fill: bg.fill }}
-        />
-        {/* USDT symbol */}
-        <animated.path
-          style={{ fill: text.fill }}
-          d="M17.922 17.383v-.002c-.11.008-.677.042-1.942.042-1.01 0-1.721-.03-1.971-.042v.003c-3.888-.171-6.79-.848-6.79-1.658 0-.809 2.902-1.486 6.79-1.66v2.644c.254.018.982.061 1.988.061 1.207 0 1.812-.05 1.925-.06v-2.643c3.88.173 6.775.85 6.775 1.658 0 .81-2.895 1.485-6.775 1.657m0-3.59v-2.366h5.414V7.819H8.595v3.608h5.414v2.365c-4.4.202-7.709 1.074-7.709 2.118 0 1.044 3.309 1.915 7.709 2.118v7.582h3.913v-7.584c4.393-.202 7.694-1.073 7.694-2.116 0-1.043-3.301-1.914-7.694-2.117"
-        />
-      </g>
+      {/* Diamond background + USDT symbol */}
+      <animated.path
+        style={{ fill: bg.fill }}
+        d="M12 20L2 10.135L5.815 4h12.37L22 10.135z"
+      />
+      <animated.path
+        style={{ fill: text.fill }}
+        d="M13 11V9.78c1.8.09 3.48.44 4 .895c-.605.53-2.77.915-5 .915s-4.395-.385-5-.915c.515-.455 2.2-.8 4-.9V11zm-6-.33v.735c.515.455 2.195.8 4 .9V15h2v-2.7c1.8-.09 3.485-.44 4-.895V9.94c-.515-.455-2.2-.805-4-.9V8h3V6.5H8V8h3v1.04c-1.805.095-3.485.445-4 .9z"
+      />
     </animated.svg>
   );
 });
 
-export default UsdtIcon;
+export default UsdtTronIcon;

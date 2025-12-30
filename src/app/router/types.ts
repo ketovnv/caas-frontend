@@ -2,10 +2,6 @@
 
 export type Route =
   | 'home'
-  | 'showcase'
-  | 'wallet'
-  | 'exchange'
-  | 'textures'
   | 'settings'
   | 'not-found';
 

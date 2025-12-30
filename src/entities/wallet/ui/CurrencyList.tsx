@@ -1,23 +1,18 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
 import { cn } from 'shared/lib';
-import { AnimatedCounter, GlowingEffect } from 'shared/ui';
+import { AnimatedCounter, AnimatedList } from 'shared/ui';
 import { themeStore } from 'shared/model';
-import { CurrencyListController } from '../model/CurrencyListController.ts';
-import {
-  CURRENCY_COLORS,
-  ENTRANCE_DELAY,
-  STAGGER_DELAY,
-} from '../config/currency-list.config.ts';
+import { CurrencyListController } from '../model/CurrencyListController';
+import { CURRENCY_COLORS, STAGGER_DELAY } from '../config/currency-list.config';
 
 // Icons
 import {
   TronIcon,
-  Ethereum,
   UsdtIcon,
-  UsdcIcon,
-} from 'shared/ui/animated/svg-icons';
+  UsdtTronIcon,
+} from 'shared/ui/animated';
 
 // ============================================================================
 // Types
@@ -28,12 +23,10 @@ export interface CurrencyItem {
   symbol: string;
   name: string;
   balance: number;
-  /** USD value */
+  isLoading?: boolean;
   value?: number;
-  /** Price change 24h (percentage) */
   change?: number;
-  /** Chain or token type for icon */
-  type: 'tron' | 'ethereum' | 'usdt' | 'usdc' | 'native';
+  type: 'tron' | 'usdt' | 'usdt-trc20' | 'native';
 }
 
 export interface CurrencyListProps {
@@ -41,16 +34,12 @@ export interface CurrencyListProps {
   selectedId?: string;
   onSelect?: (item: CurrencyItem, index: number) => void;
   className?: string;
-  /** Show USD values */
   showValue?: boolean;
-  /** Show price change */
   showChange?: boolean;
-  /** Animation preset */
-  animation?: 'slideUp' | 'fadeIn' | 'scaleUp';
 }
 
 // ============================================================================
-// Currency Icon Component
+// Currency Icon
 // ============================================================================
 
 interface CurrencyIconProps {
@@ -62,29 +51,14 @@ interface CurrencyIconProps {
 const CurrencyIcon = ({ type, size = 40, isActive = false }: CurrencyIconProps) => {
   switch (type) {
     case 'tron':
+    case 'native':
       return <TronIcon size={size} isActive={isActive} />;
-    case 'ethereum':
-      return <Ethereum size={size} isActive={isActive} />;
     case 'usdt':
       return <UsdtIcon size={size} isActive={isActive} />;
-    case 'usdc':
-      return <UsdcIcon size={size} isActive={isActive} />;
-    case 'native':
+    case 'usdt-trc20':
+      return <UsdtTronIcon size={size} isActive={isActive} />;
     default:
-      // Generic coin icon
-      return (
-        <div
-          className={cn(
-            'rounded-full flex items-center justify-center font-bold',
-            'bg-gradient-to-br from-amber-400 to-orange-500 text-white',
-            'transition-transform',
-            isActive && 'scale-110'
-          )}
-          style={{ width: size, height: size, fontSize: size * 0.4 }}
-        >
-          $
-        </div>
-      );
+      return <TronIcon size={size} isActive={isActive} />;
   }
 };
 
@@ -120,36 +94,19 @@ const CurrencyListItem = observer(function CurrencyListItem({
       onClick={onClick}
       onMouseEnter={() => itemCtrl.hover()}
       onMouseLeave={() => itemCtrl.unhover()}
-      className={cn(
-        'relative flex items-center gap-4 p-4 rounded-2xl cursor-pointer',
-        'border border-zinc-800/50',
-        'transition-colors duration-200',
-        isSelected && 'border-violet-500/50'
-      )}
+      className="relative flex items-center gap-4 px-4 py-3 cursor-pointer"
       style={{
-        opacity: itemCtrl.opacity,
-        transform: itemCtrl.transform,
-        backgroundColor: itemCtrl.background,
+        transform: itemCtrl.scaleTransform,
       }}
     >
       {/* Glow Effect */}
       <animated.div
-        className="absolute inset-0 rounded-2xl pointer-events-none"
+        className="absolute inset-0 rounded-xl pointer-events-none"
         style={{
           opacity: itemCtrl.glowOpacity,
-          boxShadow: `0 0 30px oklch(${glow[0]} ${glow[1]} ${glow[2]} / 0.3)`,
+          boxShadow: `0 0 25px oklch(${glow[0]} ${glow[1]} ${glow[2]} / 0.25)`,
         }}
       />
-
-      {/* Glowing border on selection */}
-      {isSelected && (
-        <GlowingEffect
-          spread={80}
-          proximity={100}
-          borderWidth={2}
-          glow
-        />
-      )}
 
       {/* Icon */}
       <div className="relative z-10 shrink-0">
@@ -166,12 +123,16 @@ const CurrencyListItem = observer(function CurrencyListItem({
             {item.symbol}
           </animated.span>
           <span className="font-bold text-lg tabular-nums">
-            <AnimatedCounter
-              value={item.balance}
-              decimals={item.balance < 1 ? 6 : 4}
-              duration={800}
-              easing="spring"
-            />
+            {item.isLoading ? (
+              <span className="inline-block w-4 h-4 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
+            ) : (
+              <AnimatedCounter
+                value={item.balance}
+                decimals={item.balance < 0.01 ? 4 : 2}
+                duration={800}
+                easing="spring"
+              />
+            )}
           </span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
@@ -206,28 +167,12 @@ const CurrencyListItem = observer(function CurrencyListItem({
         </div>
       </div>
 
-      {/* Selection indicator */}
-      {isSelected && (
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-          <svg
-            className="w-5 h-5 text-violet-400"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </div>
-      )}
     </animated.div>
   );
 });
 
 // ============================================================================
-// Currency List Component
+// Currency List
 // ============================================================================
 
 export const CurrencyList = observer(function CurrencyList({
@@ -238,53 +183,22 @@ export const CurrencyList = observer(function CurrencyList({
   showValue = true,
   showChange = false,
 }: CurrencyListProps) {
+  // Controller for hover/select effects (lazy init)
   const ctrlRef = useRef<CurrencyListController | null>(null);
-  const prevItemsLengthRef = useRef(0);
-
-  // Initialize controller
   if (!ctrlRef.current) {
-    ctrlRef.current = new CurrencyListController(items.length, themeStore.springConfig);
+    ctrlRef.current = new CurrencyListController(themeStore.springConfig);
   }
   const ctrl = ctrlRef.current;
 
-  // Resize controller when items change
+  // Update selection when selectedId changes
   useEffect(() => {
-    ctrl.resize(items.length);
-  }, [items.length, ctrl]);
-
-  // Animate in on mount / items change
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      ctrl.animateIn(STAGGER_DELAY);
-    }, ENTRANCE_DELAY);
-    return () => clearTimeout(timer);
-  }, [ctrl]);
-
-  // Re-animate when items length changes significantly
-  useEffect(() => {
-    if (prevItemsLengthRef.current > 0 && items.length !== prevItemsLengthRef.current) {
-      ctrl.reset();
-      setTimeout(() => ctrl.animateIn(STAGGER_DELAY), 50);
-    }
-    prevItemsLengthRef.current = items.length;
-  }, [items.length, ctrl]);
-
-  // Update selection
-  useEffect(() => {
-    const selectedIndex = selectedId
-      ? items.findIndex(item => item.id === selectedId)
-      : -1;
-    ctrl.select(selectedIndex);
+    ctrl.selectById(selectedId, items);
   }, [selectedId, items, ctrl]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => {
     return () => ctrl.dispose();
   }, [ctrl]);
-
-  const handleItemClick = useCallback((item: CurrencyItem, index: number) => {
-    onSelect?.(item, index);
-  }, [onSelect]);
 
   if (items.length === 0) {
     return (
@@ -297,20 +211,24 @@ export const CurrencyList = observer(function CurrencyList({
   }
 
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
-      {items.map((item, index) => (
+    <AnimatedList
+      items={items}
+      keyExtractor={(item) => item.id}
+      animation="slideLeft"
+      staggerDelay={STAGGER_DELAY}
+      className={cn('w-full !space-y-1', className)}
+      renderItem={(item, index) => (
         <CurrencyListItem
-          key={item.id}
           item={item}
           index={index}
           isSelected={item.id === selectedId}
           ctrl={ctrl}
-          onClick={() => handleItemClick(item, index)}
+          onClick={() => onSelect?.(item, index)}
           showValue={showValue}
           showChange={showChange}
         />
-      ))}
-    </div>
+      )}
+    />
   );
 });
 

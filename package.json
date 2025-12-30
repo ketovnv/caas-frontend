@@ -28,11 +28,7 @@
     "@reown/appkit-adapter-ethers": "^1.8.15",
     "@reown/appkit-wallet-button": "^1.8.15",
     "@use-gesture/react": "^10.3.1",
-    "@web3auth/auth-adapter": "9.7.0",
-    "@web3auth/base": "9.7.0",
-    "@web3auth/default-evm-adapter": "^9.7.0",
-    "@web3auth/ethereum-provider": "^9.7.0",
-    "@web3auth/no-modal": "9.7.0",
+    "@web3auth/no-modal": "^10.10.0",
     "ethers": "^6.16.0",
     "mobx": "^6.15.0",
     "mobx-react-lite": "^4.1.1",
@@ -40,7 +36,8 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router-dom": "^7.11.0",
-    "tronweb": "^6.1.1"
+    "tronweb": "^6.1.1",
+    "viem": "^2.43.3"
   },
   "devDependencies": {
     "@capacitor/android": "^8.0.0",

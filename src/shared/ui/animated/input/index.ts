@@ -1,5 +1,5 @@
 // Main unified input (Spotlight + Vanish effects)
-export { AnimatedInput, type AnimatedInputProps, type AnimatedInputRef } from './AnimatedInput';
+export { AnimatedInput, type AnimatedInputProps } from './AnimatedInput';
 export { AnimatedInputController } from './AnimatedInputController';
 
 // Legacy exports (deprecated - use AnimatedInput instead)

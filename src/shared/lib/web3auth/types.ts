@@ -1,4 +1,22 @@
-import type { IProvider, UserInfo } from '@web3auth/base';
+import type { IProvider } from '@web3auth/no-modal';
+
+// ============================================================================
+// User Info Interface
+// ============================================================================
+
+export interface UserInfo {
+  email?: string;
+  name?: string;
+  profileImage?: string;
+  aggregateVerifier?: string;
+  verifier?: string;
+  verifierId?: string;
+  typeOfLogin?: string;
+  dappShare?: string;
+  idToken?: string;
+  oAuthIdToken?: string;
+  oAuthAccessToken?: string;
+}
 
 // ============================================================================
 // Login Providers
@@ -92,9 +110,3 @@ export interface AuthLoginParams {
   login_hint?: string;
   extraLoginOptions?: Record<string, unknown>;
 }
-
-// ============================================================================
-// Re-exports
-// ============================================================================
-
-export type { IProvider, UserInfo };

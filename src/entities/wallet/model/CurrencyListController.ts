@@ -1,138 +1,79 @@
 import { Controller, to, type SpringConfig, type Interpolation } from '@react-spring/core';
-import {
-  ITEM_HIDDEN,
-  ITEM_VISIBLE,
-  ITEM_SELECTED,
-  ITEM_HOVER,
-  ITEM_SPRING_CONFIG,
-  STAGGER_DELAY,
-  type CurrencyItemState,
-} from '../config/currency-list.config.ts';
 
 // ============================================================================
-// Currency Item Controller - Single list item
+// Animation States (only for interactive effects, not entrance)
+// ============================================================================
+
+interface ItemInteractiveState {
+  scale: number;
+  glowOpacity: number;
+}
+
+const IDLE: ItemInteractiveState = {
+  scale: 1,
+  glowOpacity: 0,
+};
+
+const HOVER: ItemInteractiveState = {
+  scale: 1.02,
+  glowOpacity: 0.5,
+};
+
+const SELECTED: ItemInteractiveState = {
+  scale: 1.03,
+  glowOpacity: 1,
+};
+
+const SPRING_CONFIG: SpringConfig = {
+  tension: 320,
+  friction: 28,
+  mass: 0.8,
+};
+
+// ============================================================================
+// Currency Item Controller - Hover/Select effects only
 // ============================================================================
 
 export class CurrencyItemController {
-  private ctrl: Controller<CurrencyItemState>;
+  private ctrl: Controller<ItemInteractiveState>;
   private _isSelected = false;
-  private _isHovered = false;
 
-  // Cached interpolations
-  readonly transform: Interpolation<string>;
-  readonly opacity: Interpolation<number>;
-  readonly background: Interpolation<string>;
   readonly glowOpacity: Interpolation<number>;
+  readonly scaleTransform: Interpolation<string>;
 
-  constructor(config: SpringConfig = ITEM_SPRING_CONFIG) {
-    this.ctrl = new Controller({
-      ...ITEM_HIDDEN,
-      config,
-    });
-
-    const s = this.ctrl.springs;
-
-    // Transform: translateY + scale
-    this.transform = to(
-      [s.y, s.scale],
-      (y, scale) => `translateY(${y}px) scale(${scale})`
-    );
-
-    this.opacity = to([s.opacity], (o) => o);
-
-    // Background as OKLCH color
-    this.background = to(
-      [s.bgL, s.bgC, s.bgH],
-      (l, c, h) => `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${((h % 360) + 360) % 360})`
-    );
-
-    this.glowOpacity = to([s.glowOpacity], (o) => o);
+  constructor(config: SpringConfig = SPRING_CONFIG) {
+    this.ctrl = new Controller({ ...IDLE, config });
+    this.glowOpacity = to([this.ctrl.springs.glowOpacity], (o) => o);
+    this.scaleTransform = to([this.ctrl.springs.scale], (s) => `scale(${s})`);
   }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // State
-  // ─────────────────────────────────────────────────────────────────────────
 
   get isSelected() {
     return this._isSelected;
   }
 
-  get isHovered() {
-    return this._isHovered;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Animation Methods
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /** Show item with entrance animation */
-  show(config?: SpringConfig): Promise<void> {
-    return this.ctrl.start({
-      ...ITEM_VISIBLE,
-      config,
-    }).then(() => {});
-  }
-
-  /** Hide item */
-  hide(config?: SpringConfig): Promise<void> {
-    return this.ctrl.start({
-      ...ITEM_HIDDEN,
-      config,
-    }).then(() => {});
-  }
-
-  /** Select this item */
-  select(config?: SpringConfig): Promise<void> {
+  select(): void {
     this._isSelected = true;
-    return this.ctrl.start({
-      ...ITEM_VISIBLE,
-      ...ITEM_SELECTED,
-      config,
-    }).then(() => {});
+    this.ctrl.start(SELECTED);
   }
 
-  /** Deselect this item */
-  deselect(config?: SpringConfig): Promise<void> {
+  deselect(): void {
     this._isSelected = false;
-    return this.ctrl.start({
-      ...ITEM_VISIBLE,
-      config,
-    }).then(() => {});
+    this.ctrl.start(IDLE);
   }
 
-  /** Hover state */
-  hover(config?: SpringConfig): void {
+  hover(): void {
     if (this._isSelected) return;
-    this._isHovered = true;
-    this.ctrl.start({
-      ...ITEM_HOVER,
-      config,
-    });
+    this.ctrl.start(HOVER);
   }
 
-  /** Leave hover state */
-  unhover(config?: SpringConfig): void {
+  unhover(): void {
     if (this._isSelected) return;
-    this._isHovered = false;
-    this.ctrl.start({
-      ...ITEM_VISIBLE,
-      config,
-    });
+    this.ctrl.start(IDLE);
   }
 
-  /** Pulse animation (for balance update) */
   async pulse(): Promise<void> {
     await this.ctrl.start({ scale: 1.05 });
-    await this.ctrl.start({ scale: this._isSelected ? 1.02 : 1 });
-  }
-
-  /** Set state instantly */
-  set(state: Partial<CurrencyItemState>): void {
-    this.ctrl.set(state);
-  }
-
-  stop(): void {
-    this.ctrl.stop();
+    await this.ctrl.start({ scale: this._isSelected ? SELECTED.scale : IDLE.scale });
   }
 
   dispose(): void {
@@ -141,7 +82,7 @@ export class CurrencyItemController {
 }
 
 // ============================================================================
-// Currency List Controller - Manages all items
+// Currency List Controller - Manages item interactions
 // ============================================================================
 
 export class CurrencyListController {
@@ -149,120 +90,45 @@ export class CurrencyListController {
   private config: SpringConfig;
   private _selectedIndex = -1;
 
-  constructor(count: number = 0, config: SpringConfig = ITEM_SPRING_CONFIG) {
+  constructor(config: SpringConfig = SPRING_CONFIG) {
     this.config = config;
-    this.resize(count);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Item Management
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /** Get controller for specific index */
+  /** Get or create controller for index */
   get(index: number): CurrencyItemController {
-    // Auto-expand if needed
-    while (this.items.length <= index) {
-      this.items.push(new CurrencyItemController(this.config));
+    if (!this.items[index]) {
+      this.items[index] = new CurrencyItemController(this.config);
     }
-    return this.items[index]!;
+    return this.items[index];
   }
 
-  /** Get all controllers */
-  get all(): CurrencyItemController[] {
-    return this.items;
-  }
-
-  /** Number of items */
-  get length(): number {
-    return this.items.length;
-  }
-
-  /** Currently selected index */
   get selectedIndex(): number {
     return this._selectedIndex;
   }
 
-  /** Resize the controller array */
-  resize(count: number): void {
-    // Add new controllers if needed
-    while (this.items.length < count) {
-      this.items.push(new CurrencyItemController(this.config));
-    }
-    // Remove excess controllers
-    while (this.items.length > count) {
-      const removed = this.items.pop();
-      removed?.dispose();
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // List Animations
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /** Animate all items in (staggered) */
-  async animateIn(delay: number = STAGGER_DELAY): Promise<void> {
-    const promises = this.items.map((item, index) => {
-      return new Promise<void>(resolve => {
-        setTimeout(() => {
-          item.show(this.config).then(resolve);
-        }, index * delay);
-      });
-    });
-    await Promise.all(promises);
-  }
-
-  /** Animate all items out (reverse stagger) */
-  async animateOut(delay: number = STAGGER_DELAY): Promise<void> {
-    const promises = this.items.map((item, index) => {
-      const reverseIndex = this.items.length - 1 - index;
-      return new Promise<void>(resolve => {
-        setTimeout(() => {
-          item.hide(this.config).then(resolve);
-        }, reverseIndex * delay);
-      });
-    });
-    await Promise.all(promises);
-  }
-
-  /** Select item at index */
+  /** Update selection by index */
   select(index: number): void {
     // Deselect previous
-    if (this._selectedIndex >= 0 && this._selectedIndex < this.items.length) {
-      this.items[this._selectedIndex]?.deselect(this.config);
+    if (this._selectedIndex >= 0) {
+      this.items[this._selectedIndex]?.deselect();
     }
-    // Select new
+
     this._selectedIndex = index;
-    if (index >= 0 && index < this.items.length) {
-      this.items[index]?.select(this.config);
+
+    // Select new
+    if (index >= 0) {
+      this.items[index]?.select();
     }
   }
 
-  /** Clear selection */
-  clearSelection(): void {
-    if (this._selectedIndex >= 0 && this._selectedIndex < this.items.length) {
-      this.items[this._selectedIndex]?.deselect(this.config);
-    }
-    this._selectedIndex = -1;
+  /** Update selection by item id */
+  selectById(id: string | undefined, items: { id: string }[]): void {
+    const index = id ? items.findIndex(item => item.id === id) : -1;
+    this.select(index);
   }
 
-  /** Pulse specific item (for updates) */
   pulse(index: number): void {
     this.items[index]?.pulse();
-  }
-
-  /** Pulse all items */
-  pulseAll(): void {
-    this.items.forEach(item => item.pulse());
-  }
-
-  /** Reset all to hidden */
-  reset(): void {
-    this.items.forEach(item => item.set(ITEM_HIDDEN));
-    this._selectedIndex = -1;
-  }
-
-  stop(): void {
-    this.items.forEach(item => item.stop());
   }
 
   dispose(): void {

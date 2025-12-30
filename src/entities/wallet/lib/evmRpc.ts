@@ -7,24 +7,17 @@ import type { IProvider } from '@/shared/lib/web3auth';
 const SEPOLIA_RPC_URL = 'https://rpc.sepolia.org';
 
 /**
- * Extract private key from Web3Auth provider
- * Tries multiple method names for compatibility across Web3Auth versions
+ * Extract private key from Web3Auth provider (v10 API)
  */
 async function getPrivateKey(provider: IProvider): Promise<string> {
-  const methods = ['eth_private_key', 'private_key'];
-
-  for (const method of methods) {
-    try {
-      const privateKey = await provider.request<never, string>({ method });
-      if (privateKey) {
-        return privateKey;
-      }
-    } catch {
-      // Try next method
+  try {
+    const privateKey = await provider.request<never, string>({ method: 'private_key' });
+    if (privateKey) {
+      return privateKey;
     }
+  } catch (error) {
+    console.warn('[EvmRpc] getPrivateKey failed:', error);
   }
-
-  console.warn('[EvmRpc] getPrivateKey: no supported method found');
   return '';
 }
 
@@ -46,14 +39,19 @@ export async function getEvmAccount(provider: IProvider): Promise<string> {
  * @returns Balance in ETH as string
  */
 export async function getEvmBalance(provider: IProvider): Promise<string> {
+  console.log('[EvmRpc] getEvmBalance called');
   const privateKey = await getPrivateKey(provider);
+  console.log('[EvmRpc] privateKey:', privateKey ? 'exists' : 'empty');
   if (!privateKey) return '0';
 
   const { Wallet, JsonRpcProvider, formatEther } = await import('ethers');
   const wallet = new Wallet(privateKey);
+  console.log('[EvmRpc] address:', wallet.address);
   const rpcProvider = new JsonRpcProvider(SEPOLIA_RPC_URL);
 
+  console.log('[EvmRpc] Fetching balance from RPC...');
   const balance = await rpcProvider.getBalance(wallet.address);
+  console.log('[EvmRpc] Raw balance:', balance.toString());
   return formatEther(balance);
 }
 

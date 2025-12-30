@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
-import { walletStore } from '../model/wallet.store.ts';
-import { getExplorerAddressUrl } from '../config/chains.ts';
+import { walletStore } from 'entities/wallet';
+import { getExplorerAddressUrl } from 'entities/wallet';
 import { themeStore } from 'shared/model';
-import { BalanceDisplayController } from '../model/BalanceDisplayController.ts';
+import { BalanceDisplayController } from 'entities/wallet';
 
 // ============================================================================
 // Balance Display - Shows current chain balance with animation
