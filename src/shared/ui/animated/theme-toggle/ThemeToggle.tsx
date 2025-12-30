@@ -1,11 +1,8 @@
 import { useRef, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
-import { themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
 import { ToggleController } from './ToggleController';
-
-const DEBOUNCE_MS = 150;
 
 // ============================================================================
 // Types
@@ -17,17 +14,18 @@ export interface ThemeToggleProps {
 }
 
 // ============================================================================
-// Size configs
+// Size configs — thumb слегка больше контейнера (overflow ~4px)
+// translate = wrapper_width - thumb_width
 // ============================================================================
 
 const sizeConfig = {
-  sm: { wrapper: 'w-14 h-7', icon: 16, thumb: 'w-5 h-5', translate: 26 },
-  md: { wrapper: 'w-16 h-8', icon: 18, thumb: 'w-6 h-6', translate: 30 },
-  lg: { wrapper: 'w-20 h-10', icon: 22, thumb: 'w-8 h-8', translate: 38 },
+  sm: { wrapper: 'w-14 h-6', icon: 14, thumb: 28, translate: 28 },  // 56-28=28
+  md: { wrapper: 'w-16 h-7', icon: 16, thumb: 32, translate: 32 },  // 64-32=32
+  lg: { wrapper: 'w-20 h-9', icon: 20, thumb: 44, translate: 36 },  // 80-44=36
 };
 
 // ============================================================================
-// Component
+// Component — чистый view, вся логика в контроллере
 // ============================================================================
 
 export const ThemeToggle = observer(function ThemeToggle({
@@ -35,44 +33,16 @@ export const ThemeToggle = observer(function ThemeToggle({
   size = 'md',
 }: ThemeToggleProps) {
   const { wrapper, icon, thumb, translate } = sizeConfig[size];
-  const lastClickRef = useRef(0);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Controller (single instance)
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // Controller — единственный ref
   const ctrlRef = useRef<ToggleController | null>(null);
   if (!ctrlRef.current) {
     ctrlRef.current = new ToggleController(translate);
   }
   const ctrl = ctrlRef.current;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // React to theme changes
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const isDark = themeStore.themeIsDark;
-  const prevIsDarkRef = useRef(isDark);
-
-  useEffect(() => {
-    if (prevIsDarkRef.current === isDark) return;
-    prevIsDarkRef.current = isDark;
-    ctrl.animateTo(isDark);
-  }, [isDark, ctrl]);
-
   // Cleanup
-  useEffect(() => () => ctrl.stop(), [ctrl]);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Click Handler
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const handleClick = () => {
-    const now = Date.now();
-    if (now - lastClickRef.current < DEBOUNCE_MS) return;
-    lastClickRef.current = now;
-    themeStore.toggleColorScheme();
-  };
+  useEffect(() => () => ctrl.dispose(), [ctrl]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
@@ -80,9 +50,9 @@ export const ThemeToggle = observer(function ThemeToggle({
 
   return (
     <animated.button
-      onClick={handleClick}
+      onClick={ctrl.handleClick}
       className={cn(
-        'relative rounded-full p-1 cursor-pointer',
+        'relative rounded-full cursor-pointer overflow-visible',
         'border border-white/10',
         'transition-transform hover:scale-105 active:scale-95',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400',
@@ -93,26 +63,22 @@ export const ThemeToggle = observer(function ThemeToggle({
         background: ctrl.background,
         boxShadow: ctrl.boxShadow,
       }}
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={ctrl.ariaLabel}
     >
-      {/* Stars background (dark mode) */}
-      <animated.div
-        className="absolute inset-0 pointer-events-none overflow-hidden rounded-full"
-        style={{ opacity: ctrl.starsOpacity }}
-      >
-        {[...Array(5)].map((_, i) => (
-          <div
+      {/* Stars background (dark mode) — animated individually */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
+        {Array.from({ length: ctrl.starCount }, (_, i) => (
+          <animated.div
             key={i}
-            className="absolute rounded-full bg-slate-300"
+            className="absolute rounded-full bg-white"
             style={{
-              width: 2 + (i % 2),
-              height: 2 + (i % 2),
-              top: `${15 + i * 15}%`,
-              left: `${10 + i * 12}%`,
+              width: 3 + (i % 2) * 2,
+              height: 3 + (i % 2) * 2,
+              ...ctrl.getStarStyle(i),
             }}
           />
         ))}
-      </animated.div>
+      </div>
 
       {/* Sun rays background (light mode) */}
       <animated.div
@@ -131,14 +97,18 @@ export const ThemeToggle = observer(function ThemeToggle({
         ))}
       </animated.div>
 
-      {/* Thumb */}
+      {/* Thumb — слегка вылазит за границы */}
       <animated.div
-        className={cn(
-          'relative rounded-full bg-white shadow-lg',
-          'flex items-center justify-center',
-          thumb
-        )}
-        style={{ transform: ctrl.thumbTransform }}
+        className="absolute rounded-full shadow-lg flex items-center justify-center"
+        style={{
+          width: thumb,
+          height: thumb,
+          top: '50%',
+          left: 0,
+          marginTop: -thumb / 2,
+          transform: ctrl.thumbTransform,
+          backgroundColor: ctrl.thumbBackground,
+        }}
       >
         {/* Sun icon */}
         <animated.svg
