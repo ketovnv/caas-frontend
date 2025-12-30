@@ -1,4 +1,4 @@
-import type { IProvider, UserInfo } from '@web3auth/no-modal';
+import type { IProvider, UserInfo } from '@web3auth/base';
 
 // ============================================================================
 // Login Providers

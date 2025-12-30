@@ -1,9 +1,9 @@
 /**
  * 🔗 Reown AppKit Service - Headless Integration
- * 
+ *
  * WalletConnect через Reown БЕЗ модального окна.
  * Используем programmatic API для полного контроля UI.
- * 
+ *
  * @see https://docs.reown.com/appkit/javascript/core/actions
  */
 
@@ -11,7 +11,7 @@
 // Types
 // ============================================================================
 
-export type ReownWalletId = 
+export type ReownWalletId =
   | 'walletConnect'  // QR код
   | 'metamask'
   | 'trust'
@@ -44,12 +44,13 @@ class ReownService {
   private _walletButton: any = null;
   private _isInitialized = false;
   private _initPromise: Promise<void> | null = null;
-  
+  private _initFailed = false;
+
   // State
   private _address: string | null = null;
   private _chainId: number | null = null;
   private _isConnected = false;
-  
+
   // Subscribers
   private _subscribers: Set<StateCallback> = new Set();
 
@@ -58,7 +59,10 @@ class ReownService {
   // ─────────────────────────────────────────────────────────
 
   async init(): Promise<void> {
-    if (this._isInitialized) return;
+    // Already initialized or failed
+    if (this._isInitialized || this._initFailed) return;
+
+    // Already initializing
     if (this._initPromise) return this._initPromise;
 
     this._initPromise = this._doInit();
@@ -67,9 +71,10 @@ class ReownService {
 
   private async _doInit(): Promise<void> {
     const projectId = import.meta.env.VITE_REOWN_PROJECT_ID;
-    
+
     if (!projectId) {
-      console.warn('[Reown] ⚠️ Missing VITE_REOWN_PROJECT_ID');
+      console.warn('[Reown] ⚠️ Missing VITE_REOWN_PROJECT_ID - Reown disabled');
+      this._initFailed = true;
       return;
     }
 
@@ -78,7 +83,7 @@ class ReownService {
       const { createAppKit } = await import('@reown/appkit');
       const { EthersAdapter } = await import('@reown/appkit-adapter-ethers');
       const networks = await import('@reown/appkit/networks');
-      
+
       const metadata = {
         name: 'CaaS Wallet',
         description: 'Crypto-as-a-Service',
@@ -106,36 +111,78 @@ class ReownService {
           email: false,
           socials: false,
         },
-        // Отключаем встроенный UI насколько возможно
         enableWallets: true,
         enableEIP6963: true,
       });
 
-      // Subscribe to state changes
-      this._modal.subscribeProvider((state: any) => {
-        this._address = state.address ?? null;
-        this._chainId = state.chainId ?? null;
-        this._isConnected = state.isConnected ?? false;
-        
-        this._notifySubscribers();
-        
-        console.log('[Reown] State:', {
-          address: this._address?.slice(0, 10) + '...',
-          chainId: this._chainId,
-          connected: this._isConnected
-        });
-      });
+      // Subscribe to state changes - with fallback
+      this._setupSubscriptions();
 
-      // Load wallet button (lazy)
-      this._loadWalletButton();
+      // Load wallet button (lazy, non-blocking)
+      this._loadWalletButton().catch(() => {});
 
       this._isInitialized = true;
       console.log('[Reown] ✅ Initialized');
 
     } catch (error) {
       console.error('[Reown] ❌ Init failed:', error);
+      this._initFailed = true;
       this._initPromise = null;
-      throw error;
+      // Don't throw - Reown is optional
+    }
+  }
+
+  private _setupSubscriptions(): void {
+    if (!this._modal) return;
+
+    // Try subscribeProvider first
+    if (typeof this._modal.subscribeProvider === 'function') {
+      try {
+        this._modal.subscribeProvider((state: any) => {
+          this._updateState(state);
+        });
+        console.log('[Reown] Subscribed via subscribeProvider');
+        return;
+      } catch (e) {
+        console.warn('[Reown] subscribeProvider failed:', e);
+      }
+    }
+
+    // Fallback: poll state
+    console.log('[Reown] Using polling fallback for state');
+    setInterval(() => {
+      if (!this._modal) return;
+
+      const newState = {
+        address: this._modal.getAddress?.() ?? null,
+        chainId: this._modal.getChainId?.() ?? null,
+        isConnected: this._modal.getIsConnected?.() ?? false,
+      };
+
+      // Only update if changed
+      if (
+        newState.address !== this._address ||
+        newState.chainId !== this._chainId ||
+        newState.isConnected !== this._isConnected
+      ) {
+        this._updateState(newState);
+      }
+    }, 1000);
+  }
+
+  private _updateState(state: any): void {
+    this._address = state.address ?? null;
+    this._chainId = state.chainId ?? null;
+    this._isConnected = state.isConnected ?? false;
+
+    this._notifySubscribers();
+
+    if (this._address) {
+      console.log('[Reown] State:', {
+        address: this._address.slice(0, 10) + '...',
+        chainId: this._chainId,
+        connected: this._isConnected
+      });
     }
   }
 
@@ -145,7 +192,7 @@ class ReownService {
       this._walletButton = createAppKitWalletButton();
       console.log('[Reown] Wallet button loaded');
     } catch (error) {
-      console.warn('[Reown] Wallet button not available:', error);
+      // Wallet button is optional
     }
   }
 
@@ -170,7 +217,7 @@ class ReownService {
   }
 
   get isAvailable(): boolean {
-    return !!import.meta.env.VITE_REOWN_PROJECT_ID;
+    return !!import.meta.env.VITE_REOWN_PROJECT_ID && !this._initFailed;
   }
 
   get state(): ReownState {
@@ -189,7 +236,7 @@ class ReownService {
     this._subscribers.add(callback);
     // Immediate callback with current state
     callback(this.state);
-    
+
     return () => {
       this._subscribers.delete(callback);
     };
@@ -210,7 +257,7 @@ class ReownService {
    */
   async connectWalletConnect(): Promise<string | null> {
     await this.init();
-    
+
     if (!this._modal) {
       throw new Error('Reown not initialized');
     }
@@ -258,7 +305,7 @@ class ReownService {
       }
 
       const startTime = Date.now();
-      
+
       const unsubscribe = this.subscribe((state) => {
         if (state.isConnected && state.address) {
           unsubscribe();
@@ -273,7 +320,7 @@ class ReownService {
           unsubscribe();
           resolve(null);
         }
-        
+
         // Если modal закрыт без подключения
         const modalState = this._modal?.getState?.();
         if (modalState && !modalState.open && !this._isConnected) {
@@ -290,7 +337,7 @@ class ReownService {
    */
   async switchNetwork(chainId: number): Promise<void> {
     await this.init();
-    
+
     if (!this._modal) return;
 
     try {
@@ -299,7 +346,7 @@ class ReownService {
       const network = Object.values(networks).find(
         (n: any) => n?.id === chainId
       );
-      
+
       if (network) {
         this._modal.switchNetwork(network);
       }
@@ -324,15 +371,15 @@ class ReownService {
     try {
       // Close modal if open
       this._modal.close();
-      
+
       // Disconnect
       await this._modal.adapter?.connectionControllerClient?.disconnect();
-      
+
       this._address = null;
       this._chainId = null;
       this._isConnected = false;
       this._notifySubscribers();
-      
+
       console.log('[Reown] Disconnected');
     } catch (error) {
       console.warn('[Reown] Disconnect error:', error);

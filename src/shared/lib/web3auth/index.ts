@@ -1,29 +1,11 @@
-import {
-  Web3AuthNoModal,
-  WALLET_CONNECTORS,
-  AUTH_CONNECTION,
-  type IProvider,
-} from '@web3auth/no-modal';
-import { WEB3AUTH_CONFIG, AUTH_CONNECTION_IDS } from './config';
+import { Web3AuthNoModal } from '@web3auth/no-modal';
+import { AuthAdapter } from '@web3auth/auth-adapter';
+import { WALLET_ADAPTERS, type IProvider } from '@web3auth/base';
+import { WEB3AUTH_CONFIG, privateKeyProvider } from './config';
 import type { LoginProvider } from './types';
 
 // ============================================================================
-// Provider to AUTH_CONNECTION mapping
-// ============================================================================
-
-const PROVIDER_TO_AUTH_CONNECTION: Record<LoginProvider, string> = {
-  google: AUTH_CONNECTION.GOOGLE,
-  apple: AUTH_CONNECTION.APPLE,
-  twitter: AUTH_CONNECTION.TWITTER,
-  discord: AUTH_CONNECTION.DISCORD,
-  github: AUTH_CONNECTION.GITHUB,
-  facebook: AUTH_CONNECTION.FACEBOOK,
-  email_passwordless: AUTH_CONNECTION.EMAIL_PASSWORDLESS,
-  sms_passwordless: AUTH_CONNECTION.SMS_PASSWORDLESS,
-};
-
-// ============================================================================
-// Web3Auth Service (Singleton)
+// Web3Auth Service (Singleton) - v9 API
 // ============================================================================
 
 class Web3AuthService {
@@ -52,6 +34,16 @@ class Web3AuthService {
   private async _doInit(): Promise<Web3AuthNoModal> {
     this.instance = new Web3AuthNoModal(WEB3AUTH_CONFIG);
 
+    // Configure Auth adapter for social logins (v9)
+    const authAdapter = new AuthAdapter({
+      privateKeyProvider,
+      adapterSettings: {
+        uxMode: 'popup',
+      },
+    });
+
+    this.instance.configureAdapter(authAdapter);
+
     await this.instance.init();
     this._isInitialized = true;
 
@@ -79,28 +71,20 @@ class Web3AuthService {
     return this.instance?.provider ?? null;
   }
 
-  /**
-   * Получить инстанс Web3Auth (для прямого использования)
-   */
   getInstance(): Web3AuthNoModal | null {
     return this.instance;
   }
 
   // ─────────────────────────────────────────────────────────
-  // Connection Methods
+  // Connection Methods (v9 API)
   // ─────────────────────────────────────────────────────────
 
-  /**
-   * Connect with social provider (no-modal - custom UI)
-   * Requires authConnectionId from Web3Auth Dashboard
-   */
   async connectWithProvider(
     provider: LoginProvider,
     options?: { email?: string; phone?: string }
   ): Promise<IProvider | null> {
-    // Guard against multiple simultaneous connections
     if (this._isConnecting) {
-      console.warn('[Web3Auth] Already connecting, ignoring duplicate call');
+      console.warn('[Web3Auth] Already connecting');
       return null;
     }
 
@@ -112,62 +96,47 @@ class Web3AuthService {
       throw new Error('Web3Auth not initialized');
     }
 
-    const authConnection = PROVIDER_TO_AUTH_CONNECTION[provider];
-    const authConnectionId = AUTH_CONNECTION_IDS[provider];
-
-    if (!authConnectionId) {
-      throw new Error(
-        `Missing authConnectionId for ${provider}. ` +
-        `Configure VITE_W3A_${provider.toUpperCase()}_CONNECTION_ID in .env ` +
-        `or set up connection in Web3Auth Dashboard.`
-      );
-    }
-
-    // Build login params for V10 API
-    const loginParams: Record<string, unknown> = {
-      authConnection,
-      authConnectionId,
-    };
-
-    // Add login_hint for passwordless methods
-    if (provider === 'email_passwordless' && options?.email) {
-      loginParams.login_hint = options.email;
-    }
-    if (provider === 'sms_passwordless' && options?.phone) {
-      loginParams.login_hint = options.phone;
-    }
-
-    console.log('[Web3Auth] Connecting with:', { provider, authConnectionId });
-
-    // If already connected with valid provider, return it
+    // Already connected
     if (this.instance.connected && this.instance.provider) {
-      // Verify connection is actually valid by checking provider
       try {
         await this.instance.getUserInfo();
-        console.log('[Web3Auth] Already connected, returning existing provider');
+        console.log('[Web3Auth] Already connected');
         return this.instance.provider;
       } catch {
-        // Stale session - need to logout first
-        console.log('[Web3Auth] Stale session detected, logging out first');
+        console.log('[Web3Auth] Stale session, logging out');
         await this.instance.logout().catch(() => {});
       }
     }
 
     this._isConnecting = true;
+
     try {
+      console.log('[Web3Auth] Connecting with:', provider);
+
+      // Build login params for v9
+      const loginParams: Record<string, unknown> = {
+        loginProvider: provider,
+      };
+
+      // Add hints for passwordless methods
+      if (provider === 'email_passwordless' && options?.email) {
+        loginParams.extraLoginOptions = { login_hint: options.email };
+      }
+      if (provider === 'sms_passwordless' && options?.phone) {
+        loginParams.extraLoginOptions = { login_hint: options.phone };
+      }
+
       const web3authProvider = await this.instance.connectTo(
-        WALLET_CONNECTORS.AUTH,
+        WALLET_ADAPTERS.AUTH,
         loginParams
       );
+
       return web3authProvider;
     } finally {
       this._isConnecting = false;
     }
   }
 
-  /**
-   * Get user info after connection
-   */
   async getUserInfo() {
     if (!this.instance?.connected) {
       return null;
@@ -182,14 +151,12 @@ class Web3AuthService {
   }
 
   /**
-   * Get private key (for TRON)
-   * Web3Auth v10 uses eth_private_key method
+   * Get private key (works with v9 + EthereumPrivateKeyProvider)
    */
   async getPrivateKey(): Promise<string | null> {
     if (!this.provider) return null;
 
-    // Try different method names (varies by Web3Auth version/adapter)
-    const methods = ['eth_private_key', 'private_key', 'solana_private_key'];
+    const methods = ['eth_private_key', 'private_key'];
 
     for (const method of methods) {
       try {
@@ -199,17 +166,14 @@ class Web3AuthService {
           return privateKey as string;
         }
       } catch {
-        // Try next method
+        // Try next
       }
     }
 
-    console.warn('[Web3Auth] getPrivateKey: no supported method found');
+    console.warn('[Web3Auth] getPrivateKey: no method worked');
     return null;
   }
 
-  /**
-   * Disconnect
-   */
   async disconnect(): Promise<void> {
     if (!this.instance) return;
 
@@ -228,7 +192,28 @@ class Web3AuthService {
     if (!this.instance) {
       await this.init();
     }
-    return this.instance?.connected ?? false;
+
+    const isConnected = this.instance?.connected ?? false;
+    console.log('[Web3Auth] checkSession:', { isConnected, hasProvider: !!this.provider });
+
+    if (!isConnected || !this.provider) {
+      return false;
+    }
+
+    try {
+      const userInfo = await this.instance?.getUserInfo();
+      const isValid = !!userInfo;
+      console.log('[Web3Auth] Session valid:', isValid);
+      return isValid;
+    } catch (error) {
+      console.warn('[Web3Auth] Session invalid:', error);
+      try {
+        await this.instance?.logout();
+      } catch {
+        // Ignore
+      }
+      return false;
+    }
   }
 
   async handleRedirectCallback(): Promise<IProvider | null> {

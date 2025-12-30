@@ -1,235 +1,141 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
 import {
-  TransactionForm,
-  NotesSection,
-  StatsSection,
-  ChainSelector,
-  BalanceDisplay,
-  TokenSelector,
+  CurrencyList,
+  type CurrencyItem,
   walletStore,
-  getExplorerTxUrl,
+  CHAIN_CONFIGS,
+  TOKENS,
 } from 'features/wallet';
+import { authStore } from 'features/auth';
 import {
   PageLayout,
   MorphingText,
-  AnimatedTabs,
   Card,
   CardContent,
-  CardHeader,
-  type Tab,
 } from 'shared/ui';
 import { themeStore } from 'shared/model';
-import { walletPageController } from '../model';
-import { TAB_LABELS, type WalletTabId } from '../config';
 
 // ============================================================================
-// Wallet Page - Multi-chain wallet with send/receive functionality
+// Wallet Page - Currency List
 // ============================================================================
 
 export const WalletPage = observer(function WalletPage() {
-  const ctrl = walletPageController;
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
 
   // Fetch balances on mount
   useEffect(() => {
-    ctrl.fetchBalances();
-  }, [ctrl]);
+    if (authStore.isConnected) {
+      walletStore.fetchBalances();
+    }
+  }, []);
 
-  // Setup ResizeObserver
-  useEffect(() => {
-    ctrl.observeElement(contentRef.current);
-    return () => ctrl.disconnectObserver();
-  }, [ctrl]);
+  // Convert wallet balances to CurrencyItem format
+  const currencies = useMemo((): CurrencyItem[] => {
+    const items: CurrencyItem[] = [];
 
-  // Build tabs array
-  const tabs: Tab[] = [
-    {
-      id: 'send',
-      label: TAB_LABELS.send,
-      content: (
-        <TransactionForm
-          onSend={ctrl.handleSend}
-          isActive={ctrl.activeTab === 'send'}
-        />
-      ),
-    },
-    {
-      id: 'notes',
-      label: TAB_LABELS.notes,
-      content: <NotesSection maxNotes={10} isActive={ctrl.activeTab === 'notes'} />,
-    },
-    {
-      id: 'stats',
-      label: TAB_LABELS.stats,
-      content: <StatsSection isActive={ctrl.activeTab === 'stats'} />,
-    },
-  ];
+    // Add native balances (TRX, ETH)
+    for (const [chainId, balance] of walletStore.balances) {
+      const config = CHAIN_CONFIGS[chainId];
+      if (!config) continue;
 
-  const handleTabChange = (tabId: string) => {
-    ctrl.setActiveTab(tabId as WalletTabId);
+      items.push({
+        id: chainId,
+        symbol: config.symbol,
+        name: config.name,
+        balance: parseFloat(balance.balance) || 0,
+        type: chainId as CurrencyItem['type'],
+      });
+    }
+
+    // Add token balances (USDT, USDC on each chain)
+    for (const [key, balance] of walletStore.tokenBalances) {
+      const tokenConfig = TOKENS[balance.tokenId];
+      if (!tokenConfig) continue;
+
+      items.push({
+        id: key,
+        symbol: `${balance.symbol} (${CHAIN_CONFIGS[balance.chainId]?.symbol || balance.chainId})`,
+        name: tokenConfig.name,
+        balance: parseFloat(balance.balance) || 0,
+        type: balance.tokenId as CurrencyItem['type'],
+      });
+    }
+
+    return items;
+  }, [
+    walletStore.balances.size,
+    walletStore.tokenBalances.size,
+    // Re-compute when any balance updates
+    ...Array.from(walletStore.balances.values()).map(b => b.balance),
+    ...Array.from(walletStore.tokenBalances.values()).map(b => b.balance),
+  ]);
+
+  const handleCurrencySelect = (item: CurrencyItem) => {
+    setSelectedCurrency(item.id);
+
+    // Update walletStore selection
+    if (item.type === 'tron' || item.type === 'ethereum') {
+      walletStore.setSelectedChain(item.type);
+      walletStore.setSelectedToken('native');
+    } else if (item.type === 'usdt' || item.type === 'usdc') {
+      // Parse chain from id (format: "chainId:tokenId")
+      const [chainId] = item.id.split(':');
+      if (chainId === 'tron' || chainId === 'ethereum') {
+        walletStore.setSelectedChain(chainId);
+        walletStore.setSelectedToken(item.type);
+      }
+    }
   };
 
+  // Not connected state
+  if (!authStore.isConnected) {
+    return (
+      <PageLayout centerContent>
+        <animated.p style={themeStore.grayStyle} className="text-center">
+          Подключите кошелёк для просмотра баланса
+        </animated.p>
+      </PageLayout>
+    );
+  }
+
   return (
-    <PageLayout className="gap-4 p-4 sm:p-8">
-      {/* Chain Selector */}
-      <ChainSelector className="justify-center" />
+    <PageLayout className="gap-6 p-4 sm:p-8">
+      {/* Header */}
+      <div className="text-center">
+        <MorphingText
+          text="Мои активы"
+          morphTime={0.8}
+          coolDownTime={0.2}
+          className="h-8 sm:h-10 text-xl sm:text-2xl font-bold"
+        />
+      </div>
 
-      {/* Token Selector */}
-      <TokenSelector className="justify-center" />
-
-      {/* Balance Display */}
-      <BalanceDisplay showAddress />
-
-      {/* Refresh Button */}
-      <button
-        onClick={ctrl.fetchBalances}
-        disabled={walletStore.isRefreshing}
-        className="mx-auto flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 transition-colors disabled:opacity-50"
+      {/* Currency List */}
+      <Card
+        style={themeStore.backgroundStyle as unknown as React.CSSProperties}
+        className="w-full border-0"
       >
-        <svg
-          className={`w-4 h-4 ${walletStore.isRefreshing ? 'animate-spin' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+        <CardContent className="p-4">
+          <CurrencyList
+            items={currencies}
+            selectedId={selectedCurrency ?? undefined}
+            onSelect={handleCurrencySelect}
+            showValue={false}
+            showChange={false}
           />
-        </svg>
-        <span className="text-sm">
-          {walletStore.isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </span>
-      </button>
-
-      {/* Tabs outside the card */}
-      <AnimatedTabs
-        tabs={tabs}
-        activeTab={ctrl.activeTab}
-        onTabChange={handleTabChange}
-        transition="fade"
-        className="w-full"
-        tabListClass="justify-center border-0"
-        contentClass="hidden"
-      />
-
-      {/* Card with content only */}
-      <Card style={themeStore.backgroundStyle as unknown as React.CSSProperties} className="w-full border-0">
-        <CardHeader>
-          <MorphingText
-            text={ctrl.activeTitle}
-            morphTime={0.8}
-            coolDownTime={0.2}
-            className="h-7 sm:h-8 text-lg sm:text-xl"
-          />
-        </CardHeader>
-        <CardContent>
-          {/* Animated height container */}
-          <animated.div style={ctrl.heightStyle}>
-            {/* Content measurement wrapper */}
-            <div ref={contentRef}>
-              <AnimatedTabs
-                tabs={tabs}
-                activeTab={ctrl.activeTab}
-                onTabChange={handleTabChange}
-                transition="fade"
-                className="w-full"
-                tabListClass="hidden"
-              />
-            </div>
-          </animated.div>
         </CardContent>
       </Card>
 
-      {/* Send Error */}
-      {walletStore.sendError && (
-        <div className="w-full p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-          <div className="flex items-center justify-between">
-            <p className="text-red-400 text-sm">{walletStore.sendError}</p>
-            <button
-              onClick={() => walletStore.clearSendError()}
-              className="text-red-400 hover:text-red-300"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Recent Transactions */}
-      {walletStore.transactions.length > 0 && (
-        <Card className="w-full bg-zinc-900/30 border-zinc-800/50">
-          <CardHeader>
-            <p className="text-zinc-400 text-sm font-medium">Recent Transactions</p>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {walletStore.transactions.slice(0, 5).map((tx) => (
-              <div
-                key={tx.id}
-                className="flex items-center justify-between py-2 border-b border-zinc-800/50 last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                    <svg
-                      className="size-4 text-red-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 10l7-7m0 0l7 7m-7-7v18"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-zinc-200 text-sm font-medium">
-                      -{tx.amount} {tx.symbol}
-                    </p>
-                    <p className="text-zinc-500 text-xs truncate max-w-[150px]">{tx.to}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded ${
-                      tx.status === 'confirmed'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : tx.status === 'pending'
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : 'bg-red-500/20 text-red-400'
-                    }`}
-                  >
-                    {tx.status === 'confirmed' ? '✓' : tx.status === 'pending' ? '...' : '✗'}
-                  </span>
-                  <a
-                    href={getExplorerTxUrl(tx.chainId, tx.hash)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-zinc-500 hover:text-violet-400 transition-colors"
-                    title="Open in explorer"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                  </a>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+      {/* Selected Currency Info */}
+      {selectedCurrency && (
+        <animated.div
+          style={themeStore.grayStyle}
+          className="text-center text-sm"
+        >
+          Выбрано: {currencies.find(c => c.id === selectedCurrency)?.symbol}
+        </animated.div>
       )}
     </PageLayout>
   );

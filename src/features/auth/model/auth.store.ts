@@ -83,9 +83,12 @@ class AuthStore {
   // ─────────────────────────────────────────────────────────
 
   private async initialize() {
+    console.log('[AuthStore] Initializing...');
+
     try {
       // Init Web3Auth
       await web3AuthService.init();
+      console.log('[AuthStore] Web3Auth initialized');
 
       // Init Reown (non-blocking)
       reownService.init().catch(err => {
@@ -93,10 +96,13 @@ class AuthStore {
       });
 
       // Check for existing session
+      console.log('[AuthStore] Checking for existing session...');
       const hasSession = await web3AuthService.checkSession();
+      console.log('[AuthStore] Session check result:', hasSession);
 
       if (hasSession) {
         const userInfo = await web3AuthService.getUserInfo();
+        console.log('[AuthStore] Restored session for:', userInfo?.email || userInfo?.name);
 
         runInAction(() => {
           this.status = 'connected';
@@ -108,6 +114,7 @@ class AuthStore {
         // Welcome back haptic
         hapticsStore.play('success');
       } else {
+        console.log('[AuthStore] No active session, ready for login');
         runInAction(() => {
           this.status = 'ready';
         });
@@ -117,11 +124,11 @@ class AuthStore {
       this._subscribeToReown();
 
     } catch (error) {
+      console.error('[AuthStore] Init error:', error);
       runInAction(() => {
-        this.status = 'error';
+        this.status = 'ready'; // Fall back to ready instead of error
         this.error = error as Error;
       });
-      console.error('[AuthStore] Init error:', error);
     }
   }
 

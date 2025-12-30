@@ -1,4 +1,4 @@
-import type { IProvider } from '@web3auth/no-modal';
+import type { IProvider } from '@web3auth/base';
 
 // ============================================================================
 // Ethereum (Sepolia Testnet) RPC Operations

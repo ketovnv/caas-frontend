@@ -1,22 +1,17 @@
-import { WEB3AUTH_NETWORK } from '@web3auth/no-modal';
+import { WEB3AUTH_NETWORK, CHAIN_NAMESPACES } from '@web3auth/base';
+import { EthereumPrivateKeyProvider } from '@web3auth/ethereum-provider';
 
 // ============================================================================
 // Environment
 // ============================================================================
 
 const CLIENT_ID = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || 'YOUR_CLIENT_ID';
-// TODO: Switch to SAPPHIRE_MAINNET for production when project is migrated
+// TODO: Switch to SAPPHIRE_MAINNET for production
 const NETWORK = WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
 
 // ============================================================================
 // Web3Auth Connection IDs (from Dashboard)
 // ============================================================================
-
-// TODO: Get these from https://dashboard.web3auth.io
-// 1. Go to your project
-// 2. Click "Custom Authentication" or "Auth Connections"
-// 3. Create connections for each provider
-// 4. Copy the Connection ID for each
 
 export const AUTH_CONNECTION_IDS = {
   google: import.meta.env.VITE_W3A_GOOGLE_CONNECTION_ID || '',
@@ -30,26 +25,42 @@ export const AUTH_CONNECTION_IDS = {
 } as const;
 
 // ============================================================================
-// Web3Auth Config
+// Chain Config (Sepolia Testnet)
 // ============================================================================
 
-// Always use popup mode - works in both web and Capacitor WebView
-function getUxMode(): 'popup' | 'redirect' {
-  return 'popup';
-}
+export const CHAIN_CONFIG = {
+  chainNamespace: CHAIN_NAMESPACES.EIP155,
+  chainId: '0xaa36a7', // Sepolia
+  rpcTarget: 'https://rpc.sepolia.org',
+  displayName: 'Ethereum Sepolia',
+  blockExplorerUrl: 'https://sepolia.etherscan.io',
+  ticker: 'ETH',
+  tickerName: 'Ethereum',
+  logo: 'https://images.toruswallet.io/eth.svg',
+};
+
+// ============================================================================
+// Private Key Provider (required for private key access)
+// ============================================================================
+
+export const privateKeyProvider = new EthereumPrivateKeyProvider({
+  config: { chainConfig: CHAIN_CONFIG },
+});
+
+// ============================================================================
+// Web3Auth Config (v9)
+// ============================================================================
 
 export const WEB3AUTH_CONFIG = {
   clientId: CLIENT_ID,
   web3AuthNetwork: NETWORK,
+  chainConfig: CHAIN_CONFIG,
+  privateKeyProvider,
 
-  // UX mode: popup for web, redirect for mobile Capacitor
-  uxMode: getUxMode(),
+  // Session: 7 days
+  sessionTime: 86400 * 7,
 
-  // Session management
-  sessionTime: 86400 * 7, // 7 days
-  storageType: 'local' as const,
-
-  // Logging (disable in prod)
+  // Logging
   enableLogging: !import.meta.env.PROD,
 };
 
@@ -73,13 +84,11 @@ export const REDIRECT_CONFIG = {
 
   get redirectUrl(): string {
     if (isNativePlatform()) {
-      // For Capacitor, use https://localhost which is the internal origin
       return 'https://localhost/auth/callback';
     }
     return `${window.location.origin}/auth/callback`;
   },
 
-  /** UX mode: popup for web, redirect for mobile */
   get uxMode(): 'popup' | 'redirect' {
     return isNativePlatform() ? 'redirect' : 'popup';
   },
