@@ -79,3 +79,8 @@ export {
 export {
     NetworkBadge
 } from './network-badge';
+
+export {
+    Panel,
+    type PanelProps
+} from './panel';

@@ -145,3 +145,30 @@ export class IconButtonController {
     this.ctrl.stop();
   }
 }
+
+// ============================================================================
+// Icon Button Store - Manages controllers for all login buttons
+// ============================================================================
+
+class IconButtonStore {
+  private controllers = new Map<string, IconButtonController>();
+
+  /** Get or create controller for a button ID */
+  getController(id: string): IconButtonController {
+    let ctrl = this.controllers.get(id);
+    if (!ctrl) {
+      ctrl = new IconButtonController();
+      this.controllers.set(id, ctrl);
+    }
+    return ctrl;
+  }
+
+  /** Dispose all controllers */
+  dispose() {
+    this.controllers.forEach(ctrl => ctrl.stop());
+    this.controllers.clear();
+  }
+}
+
+/** Singleton instance */
+export const iconButtonStore = new IconButtonStore();

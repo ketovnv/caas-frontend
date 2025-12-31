@@ -1,6 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { useSpring, animated, config } from '@react-spring/web';
 import { router } from 'app/router';
+import { authStore } from 'features/auth';
 import { FPSMonitor, ThemeToggle } from 'shared/ui';
 import { useState } from 'react';
 
@@ -67,6 +68,7 @@ const SettingsButton = observer(function SettingsButton({ onClick, isActive }: S
 
 export const NavLinks = observer(function NavLinks() {
   const { currentRoute } = router;
+  const { isConnected } = authStore;
   const isSettings = currentRoute === 'settings';
 
   const handleSettingsClick = () => {
@@ -82,7 +84,9 @@ export const NavLinks = observer(function NavLinks() {
       {/* Right controls */}
       <div className="flex items-center gap-2 sm:gap-3">
         <ThemeToggle />
-        <SettingsButton onClick={handleSettingsClick} isActive={isSettings} />
+        {isConnected && (
+          <SettingsButton onClick={handleSettingsClick} isActive={isSettings} />
+        )}
         <FPSMonitor />
       </div>
     </nav>

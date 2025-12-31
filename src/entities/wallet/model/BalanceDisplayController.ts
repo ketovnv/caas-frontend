@@ -1,5 +1,5 @@
 import { Controller, type SpringConfig } from '@react-spring/web';
-import { makeAutoObservable, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction, reaction } from 'mobx';
 import {
   HIDDEN_STATE,
   VISIBLE_STATE,
@@ -19,12 +19,20 @@ export class BalanceDisplayController {
   // MobX observable state
   copied = false;
   private copyTimeout: ReturnType<typeof setTimeout> | null = null;
+  private disposer: (() => void) | null = null;
 
   // Animation controllers
   private mainCtrl: Controller<BalanceDisplayState>;
   private trailCtrls: Controller<TrailItemState>[];
 
-  constructor(config?: SpringConfig) {
+  /** Track if shown at least once */
+  private hasShown = false;
+
+  constructor(
+    config?: SpringConfig,
+    /** Observable function that returns true when balance is available */
+    hasBalance?: () => boolean
+  ) {
     const springConfig = config ?? TRAIL_CONFIG;
 
     // Main container animation
@@ -41,11 +49,27 @@ export class BalanceDisplayController {
     ];
 
     // MobX: exclude non-observable fields
-    makeAutoObservable<this, 'mainCtrl' | 'trailCtrls' | 'copyTimeout'>(this, {
+    makeAutoObservable<this, 'mainCtrl' | 'trailCtrls' | 'copyTimeout' | 'disposer' | 'hasShown'>(this, {
       mainCtrl: false,
       trailCtrls: false,
       copyTimeout: false,
+      disposer: false,
+      hasShown: false,
     });
+
+    // Auto-show when balance becomes available
+    if (hasBalance) {
+      this.disposer = reaction(
+        () => hasBalance(),
+        (available) => {
+          if (available && !this.hasShown) {
+            this.hasShown = true;
+            this.show();
+          }
+        },
+        { fireImmediately: true }
+      );
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -166,10 +190,25 @@ export class BalanceDisplayController {
   // ─────────────────────────────────────────────────────────
 
   dispose() {
+    this.disposer?.();
+    this.disposer = null;
     this.mainCtrl.stop();
     this.trailCtrls.forEach((ctrl) => ctrl.stop());
     if (this.copyTimeout) {
       clearTimeout(this.copyTimeout);
     }
   }
+}
+
+// ============================================================================
+// Singleton Instance - lazy initialized
+// ============================================================================
+
+let _balanceDisplayController: BalanceDisplayController | null = null;
+
+export function getBalanceDisplayController(hasBalance?: () => boolean): BalanceDisplayController {
+  if (!_balanceDisplayController) {
+    _balanceDisplayController = new BalanceDisplayController(undefined, hasBalance);
+  }
+  return _balanceDisplayController;
 }

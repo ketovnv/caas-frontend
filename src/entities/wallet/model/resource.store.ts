@@ -48,6 +48,21 @@ class ResourceStore {
     return this.resources?.totalBandwidth || 0;
   }
 
+  /** Total energy limit */
+  get totalEnergy(): number {
+    return this.resources?.totalEnergy || 0;
+  }
+
+  /** Total bandwidth limit */
+  get totalBandwidth(): number {
+    return this.resources?.totalBandwidth || 0;
+  }
+
+  /** Combined loading state */
+  get isLoading(): boolean {
+    return this.isLoadingResources || this.isEstimating;
+  }
+
   /** Free bandwidth remaining */
   get freeBandwidthRemaining(): number {
     if (!this.resources) return 5000; // Default

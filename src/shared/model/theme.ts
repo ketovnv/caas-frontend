@@ -306,6 +306,11 @@ export class ThemeStore {
         this.colorScheme = scheme;
     }
 
+    /** Alias for setColorScheme */
+    setScheme(scheme: ColorScheme) {
+        this.setColorScheme(scheme);
+    }
+
     toggle() {
         this.colorScheme = this.colorScheme === 'light' ? 'dark' : 'light';
     }

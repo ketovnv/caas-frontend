@@ -4,6 +4,7 @@ import {settingsStore} from 'shared/model/settings.store';
 import {useRef} from 'react';
 import {useResize, animated} from '@react-spring/web'
 import {themeStore} from "@/shared";
+import {NetworkBadge} from './network-badge';
 
 export const FPSMonitor = observer(() => {
     const fpsContainerRef = useRef<HTMLDivElement>(null);
@@ -20,32 +21,44 @@ export const FPSMonitor = observer(() => {
     const isVisible = settingsStore.showFpsMonitor;
 
     return (
-        <animated.div
+        <div
             style={{
-                color: core.fps.to((value) => `oklch(0.7 0.3 ${(value+1.5).toFixed(2)})`),
                 position: "fixed",
-                minWidth: width ?? '50px',
-                paddingLeft: width.to((w) => `${w / 10}px`),
-                width: width.to((w) => `${w + w/5}px`),
-                height: 'auto',
-                overflow: 'hidden',
-                display: isVisible ? 'inline-block' : 'none',
-                whiteSpace: 'nowrap',
                 top: 15,
-                left: 25,
+                left: 15,
                 zIndex: 9999,
-                background: themeStore.backgroundGradient.value,
-                borderRadius: "8px",
-                pointerEvents: "none",
-                backdropFilter: "blur(7px)"
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
             }}
         >
-            <animated.span
-                ref={fpsContainerRef}
-                style={{display: 'inline-block', fontWeight: 'bold'}}
+            {/* FPS Counter */}
+            <animated.div
+                style={{
+                    color: core.fps.to((value) => `oklch(0.7 0.3 ${(value+1.5).toFixed(2)})`),
+                    minWidth: width ?? '50px',
+                    paddingLeft: width.to((w) => `${w / 10}px`),
+                    width: width.to((w) => `${w + w/5}px`),
+                    height: 'auto',
+                    overflow: 'hidden',
+                    display: isVisible ? 'inline-block' : 'none',
+                    whiteSpace: 'nowrap',
+                    background: themeStore.backgroundGradient.value,
+                    borderRadius: "8px",
+                    pointerEvents: "none",
+                    backdropFilter: "blur(7px)"
+                }}
             >
-                {core.fps.to((value) => '🎞️'+value.toFixed(0))}
-            </animated.span>
-        </animated.div>
+                <animated.span
+                    ref={fpsContainerRef}
+                    style={{display: 'inline-block', fontWeight: 'bold'}}
+                >
+                    {core.fps.to((value) => '🎞️'+value.toFixed(0))}
+                </animated.span>
+            </animated.div>
+
+            {/* Network Badge */}
+            <NetworkBadge />
+        </div>
     );
 });

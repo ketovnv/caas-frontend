@@ -1,1 +1,2 @@
-export { NetworkBadge } from './NetworkBadge';
+export { NetworkBadge, networkBadgeController } from './NetworkBadge';
+export { NetworkBadgeController } from './NetworkBadgeController';
