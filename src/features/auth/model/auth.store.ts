@@ -106,6 +106,7 @@ class AuthStore {
 
         // Fetch balances after session restore
         walletStore.fetchBalances();
+        walletStore.startAutoRefresh();
 
         // Welcome back haptic
         hapticsStore.play('success');
@@ -191,6 +192,7 @@ class AuthStore {
 
       // Fetch balances after connect
       walletStore.fetchBalances();
+      walletStore.startAutoRefresh();
 
       hapticsStore.playWeb3('connectSuccess');
 
@@ -531,6 +533,9 @@ class AuthStore {
         this.walletAddress = null;
         this.chainId = null;
       });
+
+      // Clear wallet state and stop auto-refresh
+      walletStore.reset();
 
       // Haptic: disconnected
       hapticsStore.playWeb3('disconnect');

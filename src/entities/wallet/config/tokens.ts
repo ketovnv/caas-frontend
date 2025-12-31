@@ -1,4 +1,5 @@
 import type { ChainId } from '../model/types';
+import { networkStore } from 'shared/model';
 
 // ============================================================================
 // Token Configuration - TRC-20 tokens (Tron only)
@@ -35,10 +36,8 @@ export const USDT_TOKEN: TokenConfig = {
   name: 'Tether USD',
   decimals: 6,
   contracts: {
-    // Tron USDT (Mainnet)
-    tron: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-    // For Shasta testnet, use test token address
-    // tron: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs',
+    // Dynamic - see getTokenAddress()
+    tron: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // Mainnet default
   },
 };
 
@@ -70,27 +69,20 @@ export function getTokenConfig(tokenId: TokenId): TokenConfig {
 }
 
 // ============================================================================
-// Testnet Token Addresses (for development)
+// Dynamic Token Address (uses networkStore)
 // ============================================================================
 
-export const TESTNET_TOKENS: Partial<Record<ChainId, Record<string, string>>> = {
-  tron: {
-    // Nile testnet - USDT faucet: https://nileex.io/join/getJoinPage
-    usdt: 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf',
-  },
-};
-
-/** Check if we should use testnet tokens */
-export const USE_TESTNET_TOKENS = true; // Toggle for development
-
-/** Get the appropriate token address (mainnet or testnet) */
-export function getTokenAddress(tokenId: TokenId, chainId: ChainId): string | null {
+/**
+ * Get the appropriate token address based on current network
+ * Uses networkStore to determine mainnet/testnet
+ */
+export function getTokenAddress(tokenId: TokenId, _chainId: ChainId): string | null {
   if (tokenId === 'native') return null;
 
-  if (USE_TESTNET_TOKENS) {
-    const testnetAddr = TESTNET_TOKENS[chainId]?.[tokenId];
-    if (testnetAddr) return testnetAddr;
+  // Get USDT address from current network config
+  if (tokenId === 'usdt') {
+    return networkStore.usdtContract;
   }
 
-  return TOKENS[tokenId]?.contracts[chainId] ?? null;
+  return null;
 }

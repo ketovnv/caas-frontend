@@ -75,3 +75,7 @@ export {
     RpcStatus,
     RpcStatusCompact
 } from './rpc-status';
+
+export {
+    NetworkBadge
+} from './network-badge';

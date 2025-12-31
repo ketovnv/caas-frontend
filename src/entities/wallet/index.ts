@@ -26,7 +26,6 @@ export {
   getTokenContract,
   getTokenConfig,
   getTokenAddress,
-  USE_TESTNET_TOKENS,
 } from 'entities/wallet/config/tokens';
 
 // Input Config

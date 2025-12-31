@@ -1,4 +1,4 @@
-import {makeAutoObservable, runInAction} from 'mobx';
+import {makeAutoObservable, runInAction, reaction} from 'mobx';
 import type {
     ChainId,
     TokenId,
@@ -20,12 +20,42 @@ import {
 } from 'features/auth';
 import {web3AuthService} from 'shared/lib/web3auth';
 import {hapticsStore} from 'shared/lib/haptics';
+import {networkStore} from 'shared/model';
+import {rpcProviderManager} from 'shared/lib/tron';
+import {resourceStore} from './resource.store';
 
+// ============================================================================
+// Auto-refresh Configuration
+// ============================================================================
+
+/** Auto-refresh interval in milliseconds */
+const AUTO_REFRESH_INTERVAL = 20_000; // 20 seconds
+
+// ============================================================================
+// Dynamic Chain Config (uses networkStore)
+// ============================================================================
+
+/** Get current TRON config based on selected network */
+export function getTronConfig(): ChainConfig {
+    const network = networkStore.config;
+    const rpcUrl = network.rpcProviders[0]?.url ?? 'https://nile.trongrid.io';
+    return {
+        id: 'tron',
+        name: 'TRON',
+        symbol: 'TRX',
+        decimals: 6,
+        rpcUrl,
+        explorerUrl: network.explorerUrl,
+        faucetUrl: network.faucetUrl,
+    };
+}
+
+/** Legacy export for compatibility */
 export const TRON_CONFIG: ChainConfig = {
     id: 'tron',
     name: 'TRON',
     symbol: 'TRX',
-    decimals: 6, // 1 TRX = 1,000,000 SUN
+    decimals: 6,
     rpcUrl: 'https://nile.trongrid.io',
     explorerUrl: 'https://nile.tronscan.org',
     faucetUrl: 'https://nileex.io/join/getJoinPage',
@@ -34,11 +64,8 @@ export const TRON_CONFIG: ChainConfig = {
 // Wallet Store - Multi-Chain & Multi-Token Balance & Transaction Management
 
 class WalletStore {
-
-
     /** Token balances per chain:token key */
     tokenBalances: Map<AssetKey, TokenBalance> = new Map();
-
 
     /** Currently selected token */
     selectedToken: TokenId = 'native';
@@ -53,8 +80,26 @@ class WalletStore {
     isSending = false;
     sendError: string | null = null;
 
+    /** Auto-refresh interval ID */
+    private _refreshInterval: ReturnType<typeof setInterval> | null = null;
+
+    /** Disposers for reactions */
+    private _disposers: (() => void)[] = [];
+
     constructor() {
-        makeAutoObservable(this);
+        makeAutoObservable<WalletStore, '_refreshInterval' | '_disposers'>(this, {
+            _refreshInterval: false,
+            _disposers: false,
+        });
+
+        // React to network changes
+        this._disposers.push(
+            reaction(
+                () => networkStore.selectedNetwork,
+                () => this.handleNetworkChange(),
+                { fireImmediately: false }
+            )
+        );
     }
 
     balances: Map<ChainId, ChainBalance> = new Map();
@@ -371,8 +416,72 @@ class WalletStore {
         this.sendError = null;
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Auto-refresh
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Start auto-refresh (call after login) */
+    startAutoRefresh = () => {
+        this.stopAutoRefresh();
+
+        this._refreshInterval = setInterval(() => {
+            this.refreshAll();
+        }, AUTO_REFRESH_INTERVAL);
+
+        console.log('[WalletStore] Auto-refresh started (every 20s)');
+    };
+
+    /** Stop auto-refresh */
+    stopAutoRefresh = () => {
+        if (this._refreshInterval) {
+            clearInterval(this._refreshInterval);
+            this._refreshInterval = null;
+            console.log('[WalletStore] Auto-refresh stopped');
+        }
+    };
+
+    /** Refresh all data (balances + resources) */
+    refreshAll = async () => {
+        if (!authStore.isConnected || this.isRefreshing) return;
+
+        console.log('[WalletStore] Refreshing all data...');
+        await this.fetchBalances();
+
+        // Also refresh resources
+        const address = this.currentAddress;
+        if (address) {
+            await resourceStore.refresh(address);
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Network Change Handler
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Handle network switch */
+    private handleNetworkChange = async () => {
+        console.log('[WalletStore] Network changed to:', networkStore.selectedNetwork);
+
+        // Switch RPC providers
+        rpcProviderManager.switchNetwork(networkStore.config.rpcProviders);
+
+        // Clear current balances
+        this.balances.clear();
+        this.tokenBalances.clear();
+
+        // Refresh if connected
+        if (authStore.isConnected) {
+            await this.refreshAll();
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cleanup
+    // ─────────────────────────────────────────────────────────────────────────
+
     /** Clear all state (on disconnect) */
     reset = () => {
+        this.stopAutoRefresh();
         this.balances.clear();
         this.tokenBalances.clear();
         this.transactions = [];
@@ -380,6 +489,13 @@ class WalletStore {
         this.isRefreshing = false;
         this.isSending = false;
         this.sendError = null;
+    };
+
+    /** Dispose (cleanup reactions) */
+    dispose = () => {
+        this.stopAutoRefresh();
+        this._disposers.forEach(d => d());
+        this._disposers = [];
     };
 }
 

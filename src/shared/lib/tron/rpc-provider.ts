@@ -622,6 +622,22 @@ class RpcProviderManager {
   }
 
   /**
+   * Switch to different network providers
+   */
+  switchNetwork(providers: RpcProviderConfig[]) {
+    console.log('[RpcProviderManager] Switching network to:', providers.map(p => p.name));
+
+    // Stop existing health checks
+    if (this._healthCheckTimer) {
+      clearInterval(this._healthCheckTimer);
+      this._healthCheckTimer = null;
+    }
+
+    // Reinitialize with new providers
+    this.initialize(providers);
+  }
+
+  /**
    * Cleanup
    */
   dispose() {

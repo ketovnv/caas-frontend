@@ -19,7 +19,7 @@ export interface ChainConfig {
   decimals: number;
   rpcUrl: string;
   explorerUrl: string;
-  faucetUrl: string;
+  faucetUrl?: string;
 }
 
 /** Token configuration */

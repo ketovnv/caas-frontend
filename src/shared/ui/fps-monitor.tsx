@@ -1,5 +1,6 @@
 import {observer} from 'mobx-react-lite';
 import {core} from 'shared/model/core';
+import {settingsStore} from 'shared/model/settings.store';
 import {useRef} from 'react';
 import {useResize, animated} from '@react-spring/web'
 import {themeStore} from "@/shared";
@@ -8,7 +9,6 @@ export const FPSMonitor = observer(() => {
     const fpsContainerRef = useRef<HTMLDivElement>(null);
     const {width} = useResize({
         container: fpsContainerRef,
-        // Опционально: настроим анимацию под свои нужды
         config: {
             tension: 200,
             friction: 25,
@@ -16,6 +16,8 @@ export const FPSMonitor = observer(() => {
         },
     });
 
+    // Use CSS to hide instead of early return (hooks must be called unconditionally)
+    const isVisible = settingsStore.showFpsMonitor;
 
     return (
         <animated.div
@@ -23,11 +25,11 @@ export const FPSMonitor = observer(() => {
                 color: core.fps.to((value) => `oklch(0.7 0.3 ${(value+1.5).toFixed(2)})`),
                 position: "fixed",
                 minWidth: width ?? '50px',
-                paddingLeft:width.to((w) => `${w / 10}px`),
-                width:  width.to((w) => `${w + w/5}px`),
+                paddingLeft: width.to((w) => `${w / 10}px`),
+                width: width.to((w) => `${w + w/5}px`),
                 height: 'auto',
                 overflow: 'hidden',
-                display: 'inline-block',
+                display: isVisible ? 'inline-block' : 'none',
                 whiteSpace: 'nowrap',
                 top: 15,
                 left: 25,
@@ -44,7 +46,6 @@ export const FPSMonitor = observer(() => {
             >
                 {core.fps.to((value) => '🎞️'+value.toFixed(0))}
             </animated.span>
-
         </animated.div>
     );
 });
