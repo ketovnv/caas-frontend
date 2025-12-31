@@ -15,15 +15,7 @@ export { createAssetKey, parseAssetKey } from 'entities/wallet/model/types';
 
 // Store
 export { walletStore } from 'entities/wallet/model/wallet.store';
-
-// Chain Config
-export {
-  CHAIN_CONFIGS,
-  TRON_CONFIG,
-  DEFAULT_CHAIN,
-  getExplorerTxUrl,
-  getExplorerAddressUrl,
-} from 'entities/wallet/config/chains';
+export { transactionFormStore } from 'entities/wallet/model/TransactionFormStore';
 
 // Token Config
 export {

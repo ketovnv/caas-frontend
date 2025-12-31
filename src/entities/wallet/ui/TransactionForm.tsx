@@ -1,11 +1,11 @@
-import { useRef, useState, useCallback } from 'react';
 import { useTrail, animated } from '@react-spring/web';
 import { observer } from 'mobx-react-lite';
-import { AnimatedInput, AnimatedInputController, RippleButton } from 'shared/ui';
+import { AnimatedInput, RippleButton } from 'shared/ui';
 import { themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
-import { AMOUNT_INPUT_PROPS, ADDRESS_INPUT_PROPS } from '../config';
 import { walletStore } from '../model/wallet.store';
+import { transactionFormStore, QUICK_AMOUNTS } from '../model/TransactionFormStore';
+import { TransactionCost } from './TransactionCost';
 
 // ============================================================================
 // Types
@@ -19,17 +19,6 @@ interface TransactionFormProps {
 }
 
 // ============================================================================
-// Quick Amount Buttons
-// ============================================================================
-
-const QUICK_AMOUNTS = [
-  { label: '25%', value: 0.25 },
-  { label: '50%', value: 0.5 },
-  { label: '75%', value: 0.75 },
-  { label: 'MAX', value: 1 },
-];
-
-// ============================================================================
 // Component
 // ============================================================================
 
@@ -38,42 +27,7 @@ export const TransactionForm = observer(function TransactionForm({
   isActive = true,
   className,
 }: TransactionFormProps) {
-  // Controllers for imperative input control
-  const amountCtrlRef = useRef<AnimatedInputController | null>(null);
-  if (!amountCtrlRef.current) {
-    amountCtrlRef.current = new AnimatedInputController({
-      ...AMOUNT_INPUT_PROPS,
-    });
-  }
-  const amountCtrl = amountCtrlRef.current;
-
-  const addressCtrlRef = useRef<AnimatedInputController | null>(null);
-  if (!addressCtrlRef.current) {
-    addressCtrlRef.current = new AnimatedInputController({
-      ...ADDRESS_INPUT_PROPS,
-    });
-  }
-  const addressCtrl = addressCtrlRef.current;
-
-  const [amount, setAmount] = useState('');
-  const [address, setAddress] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
-
-  // Get balance from store
-  const balance = walletStore.currentTokenBalance;
-  const balanceStr = balance?.balance
-    ? parseFloat(balance.balance).toFixed(6)
-    : '0.000000';
-  const balanceNum = parseFloat(balanceStr) || 0;
-
-  const canSend =
-    amount.length > 0 &&
-    address.length > 0 &&
-    !isSending &&
-    parseFloat(amount) > 0 &&
-    parseFloat(amount) <= balanceNum;
+  const store = transactionFormStore;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Trail animation for form elements
@@ -88,54 +42,6 @@ export const TransactionForm = observer(function TransactionForm({
     config: themeStore.springConfig,
     delay: 80,
   });
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Handlers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const handleQuickAmount = useCallback((percentage: number) => {
-    const quickAmount = (balanceNum * percentage).toFixed(6);
-    setAmount(quickAmount);
-    setError(null);
-  }, [balanceNum]);
-
-  const handleAmountChange = useCallback((value: string) => {
-    setAmount(value);
-    setError(null);
-
-    // Validate amount
-    const num = parseFloat(value);
-    if (value && (isNaN(num) || num <= 0)) {
-      setError('Invalid amount');
-    } else if (num > balanceNum) {
-      setError('Insufficient balance');
-    }
-  }, [balanceNum]);
-
-  const handleSend = async () => {
-    if (!canSend || !onSend) return;
-
-    setIsSending(true);
-    setError(null);
-    setTxHash(null);
-
-    try {
-      // Send transaction and wait for result
-      const hash = await onSend(amount, address);
-
-      setTxHash(hash);
-      setAmount('');
-      setAddress('');
-
-      // Clear input controllers
-      amountCtrl.setValue('', true);
-      addressCtrl.setValue('', false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Transaction failed');
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
@@ -186,15 +92,15 @@ export const TransactionForm = observer(function TransactionForm({
         className="space-y-3"
       >
         <animated.label
-          style={themeStore.grayStyle}
+          style={themeStore.colorStyle}
           className="block text-sm ml-1"
         >
           Amount
         </animated.label>
         <AnimatedInput
-          controller={amountCtrl}
+          controller={store.amountCtrl}
           type="number"
-          onChange={handleAmountChange}
+          onChange={store.setAmount}
           showSubmitButton={false}
           className="text-xl"
         />
@@ -204,8 +110,8 @@ export const TransactionForm = observer(function TransactionForm({
           {QUICK_AMOUNTS.map(({ label, value }) => (
             <button
               key={label}
-              onClick={() => handleQuickAmount(value)}
-              disabled={balanceNum <= 0}
+              onClick={() => store.setQuickAmount(value)}
+              disabled={store.balanceNum <= 0}
               className={cn(
                 'flex-1 py-2.5 rounded-xl',
                 'text-sm font-medium',
@@ -231,20 +137,35 @@ export const TransactionForm = observer(function TransactionForm({
         className="space-y-3"
       >
         <animated.label
-          style={themeStore.grayStyle}
+          style={themeStore.colorStyle}
           className="block text-sm ml-1"
         >
           Recipient Address
         </animated.label>
         <AnimatedInput
-          controller={addressCtrl}
-          onChange={setAddress}
+          controller={store.addressCtrl}
+          onChange={store.setAddress}
           showSubmitButton={false}
         />
+        {/* Address validation error */}
+        {store.addressError && (
+          <p className="text-red-400 text-xs ml-1 -mt-1">
+            {store.addressError}
+          </p>
+        )}
+        {/* Valid address indicator */}
+        {store.address && store.isAddressValid && (
+          <p className="text-emerald-400 text-xs ml-1 -mt-1 flex items-center gap-1">
+            <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            Адреса валідна
+          </p>
+        )}
       </animated.div>
 
       {/* Error Display */}
-      {error && (
+      {store.error && (
         <animated.div
           style={{
             opacity: trail[3]?.opacity,
@@ -256,12 +177,12 @@ export const TransactionForm = observer(function TransactionForm({
             'text-red-400 text-sm text-center'
           )}
         >
-          {error}
+          {store.error}
         </animated.div>
       )}
 
       {/* Success Display */}
-      {txHash && (
+      {store.txHash && (
         <animated.div
           style={{
             opacity: trail[3]?.opacity,
@@ -276,10 +197,10 @@ export const TransactionForm = observer(function TransactionForm({
             Транзакция отправлена!
           </p>
           <p className="text-zinc-400 text-xs text-center break-all font-mono">
-            {txHash.length > 20 ? `${txHash.slice(0, 20)}...${txHash.slice(-10)}` : txHash}
+            {store.txHash.length > 20 ? `${store.txHash.slice(0, 20)}...${store.txHash.slice(-10)}` : store.txHash}
           </p>
           <button
-            onClick={() => setTxHash(null)}
+            onClick={store.clearTxHash}
             className="mt-2 w-full text-green-400 hover:text-green-300 text-xs"
           >
             Закрыть
@@ -296,8 +217,8 @@ export const TransactionForm = observer(function TransactionForm({
         className="pt-2"
       >
         <RippleButton
-          onClick={handleSend}
-          disabled={!canSend}
+          onClick={() => store.send(onSend)}
+          disabled={!store.canSend}
           className={cn(
             'w-full py-5 rounded-2xl text-lg font-semibold',
             'bg-violet-600 hover:bg-violet-500',
@@ -305,7 +226,7 @@ export const TransactionForm = observer(function TransactionForm({
           )}
         >
           <div className="flex items-center justify-center gap-3">
-            {isSending ? (
+            {store.isSending ? (
               <>
                 <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24">
                   <circle
@@ -340,18 +261,35 @@ export const TransactionForm = observer(function TransactionForm({
         </RippleButton>
       </animated.div>
 
-      {/* Fee Estimate */}
-      <animated.div
-        style={{
-          opacity: trail[4]?.opacity,
-          transform: trail[4]?.y.to(y => `translateY(${y}px)`),
-        }}
-        className="text-center"
-      >
-        <animated.p style={themeStore.grayStyle} className="text-xs">
-          Network fee will be calculated at send time
-        </animated.p>
-      </animated.div>
+      {/* Transaction Cost - only for USDT */}
+      {walletStore.selectedToken === 'usdt' && (
+        <animated.div
+          style={{
+            opacity: trail[4]?.opacity,
+            transform: trail[4]?.y.to(y => `translateY(${y}px)`),
+          }}
+        >
+          <TransactionCost
+            recipientAddress={store.address}
+            amount={store.amount}
+          />
+        </animated.div>
+      )}
+
+      {/* Fee note for TRX */}
+      {walletStore.selectedToken === 'native' && (
+        <animated.div
+          style={{
+            opacity: trail[4]?.opacity,
+            transform: trail[4]?.y.to(y => `translateY(${y}px)`),
+          }}
+          className="text-center"
+        >
+          <animated.p style={themeStore.grayStyle} className="text-xs">
+            Комісія ~0.1 TRX (bandwidth)
+          </animated.p>
+        </animated.div>
+      )}
     </div>
   );
 });

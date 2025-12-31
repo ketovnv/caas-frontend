@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { useTrail, animated } from '@react-spring/web';
 import { observer } from 'mobx-react-lite';
-import { AnimatedInput, AnimatedList } from 'shared/ui';
+import { AnimatedInput, AnimatedInputController, AnimatedList } from 'shared/ui';
 import { themeStore } from 'shared/model';
 import { MESSAGE_INPUT_PROPS } from '../config';
+
+// ============================================================================
+// Controller (module-level singleton)
+// ============================================================================
+
+const noteInputCtrl = new AnimatedInputController(MESSAGE_INPUT_PROPS);
 
 // ============================================================================
 // Types
@@ -109,7 +115,7 @@ export const NotesSection = observer(({
         }}
       >
         <AnimatedInput
-          {...MESSAGE_INPUT_PROPS}
+          controller={noteInputCtrl}
           onSubmit={handleAddNote}
         />
       </animated.div>

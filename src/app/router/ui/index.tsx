@@ -28,7 +28,7 @@ const NotFoundPage = lazy(() => import('pages/not-found').then(m => ({ default: 
 const routes: Record<Route, ComponentType> = {
   home: HomePage,
   settings: SettingsPage,
-  'not-found': NotFoundPage,
+  'not-found': NotFoundPage
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ export const AppRouter = observer(function AppRouter() {
       ...transitionSpring,
       duration: transitionConfig.duration,
     },
-    exitBeforeEnter: true,
+    exitBeforeEnter: false,
     onRest: (_result, _spring, item) => {
       // Only call when the entering item finishes
       if (item === currentRoute) {
@@ -131,7 +131,7 @@ export const AppRouter = observer(function AppRouter() {
 
   return (
     <div
-      className="relative w-full overflow-hidden"
+      className="relative w-full"
       style={{ perspective: '1200px' }}
     >
       {transitions((style, route) => {
@@ -154,13 +154,10 @@ export const AppRouter = observer(function AppRouter() {
                 ? (style.rotateY as any).to((v: number) => v + ctrl.dragRotateY.get())
                 : style.rotateY,
               position: isCurrentPage ? 'relative' : 'absolute',
-              top: isCurrentPage ? undefined : 0,
-              left: isCurrentPage ? undefined : 0,
               width: '100%',
               transformStyle: 'preserve-3d',
               willChange: 'transform, opacity',
               touchAction: 'pan-y',
-              pointerEvents: isCurrentPage ? 'auto' : 'none',
             }}
           >
             <Suspense fallback={<PageLoader />}>

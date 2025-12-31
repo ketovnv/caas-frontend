@@ -70,3 +70,8 @@ export {
     PageLayout,
     type PageLayoutProps
 } from './layout';
+
+export {
+    RpcStatus,
+    RpcStatusCompact
+} from './rpc-status';

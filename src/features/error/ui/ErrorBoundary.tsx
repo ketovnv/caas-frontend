@@ -148,7 +148,7 @@ export const DefaultErrorFallback: FC<{
                         <summary className="cursor-pointer hover:text-cyan-400">
                             {error.message}
                         </summary>
-                        <pre className="mt-2 text-yellow-200 bg-red-800 p-2 rounded overflow-auto">
+                        <pre className="mt-2 text-yellow-200 bg-red-800 p-2 rounded">
                             {error.stack}
                         </pre>
                     </details>

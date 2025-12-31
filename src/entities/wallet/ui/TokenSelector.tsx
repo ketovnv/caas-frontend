@@ -1,13 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
-import { walletStore } from 'entities/wallet';
+import { walletStore, TRON_CONFIG } from 'entities/wallet';
 import { TOKENS } from '../config/tokens';
 import type { TokenId } from '../model/types';
 import { createAssetKey } from '../model/types';
-import { themeStore } from 'shared/model';
 import { TokenButtonController } from '../model/TokenSelectorController.ts';
-import { TOKEN_DISPLAY } from '../config/token-selector.config.ts';
+import { TOKEN_DISPLAY, TOKEN_BUTTON_CONFIG } from '../config/token-selector.config.ts';
 
 // ============================================================================
 // Token Selector - Select token within the current chain
@@ -33,14 +32,14 @@ export const TokenSelector = observer(function TokenSelector({
         if (tokenId === 'native') {
           balance = walletStore.currentBalance?.balance || '0';
         } else {
-          const key = createAssetKey(walletStore.selectedChain, tokenId);
+          const key = createAssetKey('tron', tokenId);
           balance = walletStore.tokenBalances.get(key)?.balance || '0';
         }
 
         // Get symbol based on chain for native
         const symbol =
           tokenId === 'native'
-            ? walletStore.currentChainConfig.symbol
+            ? TRON_CONFIG.symbol
             : tokenConfig.symbol;
 
         return (
@@ -82,14 +81,14 @@ const TokenButton = observer(function TokenButton({
 
   // Initialize controller once
   if (!ctrlRef.current) {
-    ctrlRef.current = new TokenButtonController(isActive, themeStore.springConfig);
+    ctrlRef.current = new TokenButtonController(isActive, TOKEN_BUTTON_CONFIG);
   }
 
   const ctrl = ctrlRef.current;
 
   // Animate on active state change
   useEffect(() => {
-    ctrl.animateTo(isActive, themeStore.springConfig);
+    ctrl.animateTo(isActive, TOKEN_BUTTON_CONFIG);
   }, [isActive, ctrl]);
 
   // Cleanup

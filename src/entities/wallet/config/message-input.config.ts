@@ -15,12 +15,12 @@ export const messageSpring: SpringConfig = {
 // (spotlight/particle colors default to themeStore.accentColor in controller)
 // ============================================================================
 
+/** Controller options for note/message input */
 export const MESSAGE_INPUT_PROPS = {
   placeholders: [
     'Добавить заметку...',
     'Комментарий к транзакции...',
     'Memo...',
-  ] as string[],
+  ],
   spotlightRadius: 100,
-  showSubmitButton: true,
 };

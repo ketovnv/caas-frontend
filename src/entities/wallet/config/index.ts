@@ -14,5 +14,5 @@ export {
 export * from './token-selector.config';
 export * from './tokens';
 export * from './currency-list.config';
-export * from './chains';
 export * from './balance-display.config';
+export * from './wallet-card.config';

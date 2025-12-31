@@ -1,3 +1,4 @@
+import type React from 'react';
 import { Controller, to, SpringValue, Interpolation } from '@react-spring/core';
 import { makeAutoObservable, runInAction } from 'mobx';
 import { themeStore, core } from 'shared/model';
@@ -298,6 +299,16 @@ export class AnimatedInputController {
     this.updatePlaceholderAnimation();
   }
 
+  /**
+   * Animate to a numeric value (with spring animation)
+   * Use for quick amounts, sliders, etc.
+   */
+  animateTo(value: number) {
+    this.value = this.formatNumericValue(value);
+    this._numericSpring.start(value);
+    this.updatePlaceholderAnimation();
+  }
+
   private formatNumericValue(num: number): string {
     // Remove trailing zeros for cleaner display
     return Number.isInteger(num) ? String(num) : num.toFixed(2).replace(/\.?0+$/, '');
@@ -307,13 +318,13 @@ export class AnimatedInputController {
   // Mouse Events (Spotlight)
   // ─────────────────────────────────────────────────────────────────────────
 
-  onMouseMove(clientX: number, clientY: number) {
+  onMouseMoveEvent = (e: React.MouseEvent) => {
     if (!this.containerElement) return;
 
     // Store pending values
     const { left, top, width, height } = this.containerElement.getBoundingClientRect();
-    this._pendingMouseX = ((clientX - left) / width) * 100;
-    this._pendingMouseY = ((clientY - top) / height) * 100;
+    this._pendingMouseX = ((e.clientX - left) / width) * 100;
+    this._pendingMouseY = ((e.clientY - top) / height) * 100;
 
     // Use CoreStore's central loop for synchronized updates
     if (this._mouseMoveScheduled) return;
@@ -327,7 +338,7 @@ export class AnimatedInputController {
       this.containerElement?.style.setProperty('--mouse-y', `${this._mouseY}%`);
       this._mouseMoveScheduled = false;
     });
-  }
+  };
 
   onMouseEnter() {
     this.isHovered = true;
@@ -365,6 +376,26 @@ export class AnimatedInputController {
       config: spotlightSpring,
     });
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Form Event Handlers (for direct use in JSX)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  onFormSubmit = (e: React.FormEvent, onSubmit?: (value: string) => void) => {
+    e.preventDefault();
+    this.submit(onSubmit);
+  };
+
+  onInputChange = (e: React.ChangeEvent<HTMLInputElement>, isNumeric: boolean, onChange?: (value: string) => void) => {
+    this.setValue(e.target.value, isNumeric);
+    onChange?.(e.target.value);
+  };
+
+  onInputKeyDown = (e: React.KeyboardEvent, onSubmit?: (value: string) => void) => {
+    if (e.key === 'Enter' && this.canSubmit) {
+      this.submit(onSubmit);
+    }
+  };
 
   // ─────────────────────────────────────────────────────────────────────────
   // Placeholder Rotation

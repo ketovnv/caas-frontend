@@ -119,17 +119,60 @@ VITE_WEB3AUTH_CLIENT_ID=...  # Required for Web3Auth (Sapphire Devnet)
 - `model/types.ts` - Types: `ChainId = 'tron'`, `TokenId = 'native' | 'usdt'`
 - `ui/WalletCard.tsx` - Flippable card showing TRX (front) / USDT (back)
 - `ui/TransactionForm.tsx` - Send transaction form
-- `config/chains.ts` - Tron chain config (Shasta testnet)
-- `config/tokens.ts` - USDT TRC-20 token config
+- `config/tokens.ts` - TRC-20 token config (USDT on Shasta testnet)
 
-### WalletCard Interaction
-- **Desktop**: Hover to preview flip, click to lock, mouse leave returns if unlocked
-- **Mobile**: Tap to toggle between TRX and USDT sides
-- Currency selection syncs with `walletStore.selectedToken`
+### WalletCardController (`entities/wallet/model/WalletCardController.ts`)
+Encapsulates flip animation and interaction logic:
+- Spring-based 3D flip with scale effect (`wallet-card.config.ts`)
+- Desktop: hover to preview, click to lock
+- Mobile: tap to toggle
+- Syncs with `walletStore.selectedToken` via MobX reaction
+
+### TransactionFormStore (`entities/wallet/model/TransactionFormStore.ts`)
+Form state management with AnimatedInputController integration:
+- Amount/address validation with error messages
+- Quick amount buttons (25%, 50%, 75%, MAX)
+- Transaction submission with loading/error/success states
 
 ### Tron Integration
-- RPC helpers in `features/auth/lib/tronRpc.ts` (Shasta testnet)
+- RPC helpers in `features/auth/lib/tronRpc.ts` (Nile testnet)
 - TronLink wallet adapter in `shared/lib/tronlink/`
+
+### RPC Provider Manager (`shared/lib/tron/rpc-provider.ts`)
+Multi-provider system with rate limiting, health checks, and automatic fallback:
+```typescript
+rpcProviderManager.initialize(NILE_TESTNET_PROVIDERS);  // Default
+rpcProviderManager.addQuickNode('https://...', apiKey); // Add QuickNode
+rpcProviderManager.executeRequest((tronWeb) => ...);    // Auto rate-limit & fallback
+rpcProviderManager.stats                                // Health & request stats
+```
+- Rate limiting per provider (e.g., TronGrid: 15 req/s)
+- Automatic fallback to next healthy provider on errors
+- Health checks every 30 seconds
+- UI components: `<RpcStatus />`, `<RpcStatusCompact />`
+
+### Tron Resources (`shared/lib/tron/`)
+- `TronResourceService` - Calculates energy/bandwidth costs for transactions
+- `types.ts` - `TronConstants`, `WalletResources`, `TransactionCostEstimate` types
+- Cost estimation for USDT transfers: ~65,000 energy (new recipient), ~29,000 (existing)
+- Sun/TRX conversion helpers: `sunToTrx()`, `trxToSun()`
+
+### ResourceStore (`entities/wallet/model/resource.store.ts`)
+Manages wallet energy/bandwidth state and transaction cost estimation:
+```typescript
+resourceStore.fetchResources(address);     // Get energy & bandwidth
+resourceStore.estimateCost(sender, recipient, amount, trxBalance);
+resourceStore.formattedCost                // "Free" or "~0.5 TRX"
+```
+
+### Remote Config (`shared/lib/remote-config/`)
+Fetches chain constants (energy prices, fees) from server with caching:
+```typescript
+remoteConfigStore.tron           // TRON network constants
+initRemoteConfig(endpoint)       // Initialize on app start
+```
+- 5-minute cache TTL with localStorage persistence
+- Falls back to `DEFAULT_TRON_CONSTANTS` when offline
 
 ### Capacitor (Mobile)
 - `shared/lib/haptics/` - Haptic feedback wrapper
@@ -222,7 +265,8 @@ export class BalanceDisplayController {
 - `GradientSpring` — 4-цветный градиент (radial/linear/conic)
 - `DynamicColorArraySpring` — массив произвольного числа цветов
 - `IconSpring` — анимированные SVG иконки с hover/press состояниями
-- `CurrencyListController` — список валют с анимацией (`entities/wallet/`)
+- `WalletCardController` — flip-анимация карточки кошелька (`entities/wallet/`)
+- `AnimatedInputController` — анимированные инпуты с spring-значениями
 
 ### Принципы
 

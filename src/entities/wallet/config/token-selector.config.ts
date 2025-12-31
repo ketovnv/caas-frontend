@@ -24,8 +24,9 @@ export const INACTIVE_STATE: TokenButtonState = {
 };
 
 export const TOKEN_BUTTON_CONFIG: SpringConfig = {
-  tension: 300,
-  friction: 20,
+  tension: 150,
+  friction:100,
+  mass: 100
 };
 
 /** Token display info */

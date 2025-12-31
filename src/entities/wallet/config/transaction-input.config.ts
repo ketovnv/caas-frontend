@@ -20,24 +20,21 @@ export const transactionSpring: SpringConfig = {
 // (spotlight/particle colors default to themeStore.accentColor in controller)
 // ============================================================================
 
-/** Настройки для инпута суммы */
+/** Controller options for amount input */
 export const AMOUNT_INPUT_PROPS = {
-  placeholder: '0.00 TRX',
+  placeholders: ['0.00 TRX'],
   spotlightRadius: 80,
-  showSubmitButton: false,
   step: 1,
   min: 0,
-  quickAmounts: [10, 100],
-} as const;
+};
 
-/** Настройки для инпута адреса */
+/** Controller options for address input */
 export const ADDRESS_INPUT_PROPS = {
   placeholders: [
     'Адрес получателя...',
     'T... или имя...',
-  ] as string[],
+  ],
   spotlightRadius: 120,
-  showSubmitButton: false,
 };
 
 // ============================================================================

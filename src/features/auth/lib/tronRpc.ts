@@ -1,7 +1,6 @@
 import { TronWeb } from 'tronweb';
 import type { IProvider } from '@/shared/lib/web3auth';
-
-const TRON_RPC_URL = 'https://api.shasta.trongrid.io';
+import { rpcProviderManager } from 'shared/lib/tron/rpc-provider';
 
 async function getPrivateKey(provider: IProvider): Promise<string> {
   try {
@@ -16,10 +15,7 @@ async function getPrivateKey(provider: IProvider): Promise<string> {
 }
 
 function getTronWeb(privateKey: string): TronWeb {
-  return new TronWeb({
-    fullHost: TRON_RPC_URL,
-    privateKey,
-  });
+  return rpcProviderManager.getTronWebWithKey(privateKey);
 }
 
 export async function getTronAccount(provider: IProvider): Promise<string> {

@@ -81,7 +81,7 @@ export const NavLinks = observer(function NavLinks() {
     <nav className="relative flex items-center justify-end p-2 sm:p-4">
       {/* Right controls */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <ThemeToggle size="sm" />
+        <ThemeToggle />
         <SettingsButton onClick={handleSettingsClick} isActive={isSettings} />
         <FPSMonitor />
       </div>

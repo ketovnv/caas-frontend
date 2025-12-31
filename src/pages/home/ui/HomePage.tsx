@@ -1,9 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useSpring, animated, config } from '@react-spring/web';
 import { LoginButton, authStore } from 'features/auth';
 import { WalletCard, walletStore, TransactionForm } from 'entities/wallet';
-import type { TokenId } from 'entities/wallet';
 import { PageLayout } from 'shared/ui';
 import { themeStore } from 'shared/model';
 
@@ -77,54 +76,11 @@ const AnimatedAddress = observer(function AnimatedAddress({
 });
 
 // ============================================================================
-// Currency Label Component
-// ============================================================================
-
-interface CurrencyLabelProps {
-  currency: TokenId;
-}
-
-const CurrencyLabel = observer(function CurrencyLabel({ currency }: CurrencyLabelProps) {
-  const spring = useSpring({
-    opacity: 1,
-    scale: 1,
-    from: { opacity: 0, scale: 0.8 },
-    reset: true,
-    config: config.wobbly,
-  });
-
-  const label = currency === 'native' ? 'TRX' : 'USDT';
-  const color = currency === 'native' ? 'text-red-400' : 'text-emerald-400';
-
-  return (
-    <animated.span
-      style={spring}
-      className={`text-lg font-semibold ${color}`}
-    >
-      {label}
-    </animated.span>
-  );
-});
-
-// ============================================================================
 // Home Page - Simplified with WalletCard
 // ============================================================================
 
 export const HomePage = observer(function HomePage() {
-  const { isConnected, status } = authStore;
-  const [selectedCurrency, setSelectedCurrency] = useState<TokenId>('native');
-
-  // Fetch balances when connected
-  useEffect(() => {
-    if (isConnected) {
-      walletStore.fetchBalances();
-    }
-  }, [isConnected]);
-
-  // Handle currency change from WalletCard
-  const handleCurrencyChange = useCallback((currency: TokenId) => {
-    setSelectedCurrency(currency);
-  }, []);
+  const { isConnected} = authStore;
 
   // Handle send transaction
   const handleSend = useCallback(async (amount: string, address: string): Promise<string> => {
@@ -139,55 +95,47 @@ export const HomePage = observer(function HomePage() {
   }, []);
 
   // Get current address
-  const currentAddress = walletStore.balances.get('tron')?.address || '';
+
 
   // Loading state
-  if (status === 'initializing') {
-    return (
-      <PageLayout centerContent>
-        <div className="flex items-center justify-center">
-          <svg className="w-10 h-10 animate-spin text-violet-500" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12" cy="12" r="10"
-              stroke="currentColor"
-              strokeWidth="3"
-              fill="none"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-        </div>
-      </PageLayout>
-    );
-  }
+  // if (status === 'initializing') {
+  //   return (
+  //     <PageLayout centerContent>
+  //       <div className="flex items-center justify-center">
+  //         <svg className="w-10 h-10 animate-spin text-violet-500" viewBox="0 0 24 24">
+  //           <circle
+  //             className="opacity-25"
+  //             cx="12" cy="12" r="10"
+  //             stroke="currentColor"
+  //             strokeWidth="3"
+  //             fill="none"
+  //           />
+  //           <path
+  //             className="opacity-75"
+  //             fill="currentColor"
+  //             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+  //           />
+  //         </svg>
+  //       </div>
+  //     </PageLayout>
+  //   );
+  // }
 
   // Connected - show wallet card
   if (isConnected) {
     return (
       <PageLayout className="items-center justify-center gap-6 p-4 sm:p-8">
         {/* Address */}
-        <AnimatedAddress address={currentAddress} />
-
         {/* Wallet Card */}
         <WalletCard
-          onCurrencyChange={handleCurrencyChange}
-          className="my-4"
+          className="my-2"
         />
-
-        {/* Current currency indicator */}
-        <div className="flex items-center gap-2 text-zinc-500 text-sm">
-          <span>Выбрано:</span>
-          <CurrencyLabel currency={selectedCurrency} />
-        </div>
+        <AnimatedAddress address={walletStore.balances.get('tron')?.address || ''} />
 
         {/* Send Form */}
         <animated.div
-          style={themeStore.backgroundStyle as unknown as React.CSSProperties}
-          className="w-full max-w-sm rounded-2xl border border-zinc-800/50 p-4"
+          style={themeStore.backgroundStyle}
+          className="w-full max-w-sm rounded-2xl  p-4"
         >
           <TransactionForm
             onSend={handleSend}

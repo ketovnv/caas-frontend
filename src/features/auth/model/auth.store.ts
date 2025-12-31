@@ -5,6 +5,7 @@ import { metaMaskService } from '@/shared/lib/metamask';
 import { reownService, type ReownWalletId } from '@/shared/lib/reown';
 import { hapticsStore } from '@/shared/lib/haptics';
 import { router } from 'app/router';
+import { walletStore } from 'entities/wallet';
 
 // ============================================================================
 // Types
@@ -103,6 +104,9 @@ class AuthStore {
           this.walletType = 'web3auth';
         });
 
+        // Fetch balances after session restore
+        walletStore.fetchBalances();
+
         // Welcome back haptic
         hapticsStore.play('success');
       } else {
@@ -184,6 +188,9 @@ class AuthStore {
         this.selectedProvider = null;
         this.walletType = 'web3auth';
       });
+
+      // Fetch balances after connect
+      walletStore.fetchBalances();
 
       hapticsStore.playWeb3('connectSuccess');
 

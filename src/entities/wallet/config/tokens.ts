@@ -75,8 +75,8 @@ export function getTokenConfig(tokenId: TokenId): TokenConfig {
 
 export const TESTNET_TOKENS: Partial<Record<ChainId, Record<string, string>>> = {
   tron: {
-    // Shasta testnet
-    usdt: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs',
+    // Nile testnet - USDT faucet: https://nileex.io/join/getJoinPage
+    usdt: 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf',
   },
 };
 

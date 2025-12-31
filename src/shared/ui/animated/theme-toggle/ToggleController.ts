@@ -76,12 +76,10 @@ const DEBOUNCE_MS = 150;
 export class ToggleController {
   private ctrl: Controller<ToggleState>;
   private starCtrls: Controller<StarState>[];
-  private _translate: number;
   private _lastClickTime = 0;
   private _disposers: (() => void)[] = [];
 
-  constructor(translate: number, config?: SpringConfig) {
-    this._translate = translate;
+  constructor( config?: SpringConfig) {
     const isDark = themeStore.themeIsDark;
     const initial = isDark ? DARK : LIGHT;
     const starInitial = isDark ? STARS_DARK : STARS_LIGHT;
@@ -97,10 +95,9 @@ export class ToggleController {
       config: config ?? themeStore.springConfig,
     }));
 
-    makeAutoObservable<this, 'ctrl' | 'starCtrls' | '_translate' | '_lastClickTime' | '_disposers'>(this, {
+    makeAutoObservable<this, 'ctrl' | 'starCtrls' | '_lastClickTime' | '_disposers'>(this, {
       ctrl: false,
       starCtrls: false,
-      _translate: false,
       _lastClickTime: false,
       _disposers: false,
     });
@@ -145,7 +142,7 @@ export class ToggleController {
   get thumbTransform() {
     const s = this.ctrl.springs;
     return to([s.thumbX, s.thumbRotate], (x, r) =>
-      `translateX(${x * this._translate}px) rotate(${r}deg)`
+      `translateX(${x * 32}px) rotate(${r}deg)`
     );
   }
 
@@ -268,10 +265,6 @@ export class ToggleController {
     this.starCtrls.forEach((ctrl, i) => ctrl.set(stars[i]!));
   }
 
-  setTranslate(translate: number) {
-    this._translate = translate;
-  }
-
   // ─────────────────────────────────────────────────────────────────────────
   // Lifecycle
   // ─────────────────────────────────────────────────────────────────────────
@@ -288,3 +281,9 @@ export class ToggleController {
     this.starCtrls.forEach(ctrl => ctrl.stop());
   }
 }
+
+// ============================================================================
+// Singleton
+// ============================================================================
+
+export const toggleController = new ToggleController();

@@ -2,6 +2,7 @@ import {observer} from 'mobx-react-lite';
 import {core} from 'shared/model/core';
 import {useRef} from 'react';
 import {useResize, animated} from '@react-spring/web'
+import {themeStore} from "@/shared";
 
 export const FPSMonitor = observer(() => {
     const fpsContainerRef = useRef<HTMLDivElement>(null);
@@ -11,32 +12,30 @@ export const FPSMonitor = observer(() => {
         config: {
             tension: 200,
             friction: 25,
-            mass: 2,
+            mass: 1.5,
         },
     });
 
-    const fullWidth = width.to((w) => `${w + w/5}px`);
-    const paddingLeft = width.to((w) => `${w / 10}px`);
 
     return (
         <animated.div
             style={{
-                color: core.fps.to((value) => `oklch(70% 0.3 ${(value+1.5).toFixed(2)})`),
+                color: core.fps.to((value) => `oklch(0.7 0.3 ${(value+1.5).toFixed(2)})`),
                 position: "fixed",
                 minWidth: width ?? '50px',
-                paddingLeft,
-                width: fullWidth,
+                paddingLeft:width.to((w) => `${w / 10}px`),
+                width:  width.to((w) => `${w + w/5}px`),
                 height: 'auto',
                 overflow: 'hidden',
                 display: 'inline-block',
                 whiteSpace: 'nowrap',
-                top: 65,
-                right: 25,
+                top: 15,
+                left: 25,
                 zIndex: 9999,
-                background: "oklch(0.5 0.013 264.05 /.1)",
+                background: themeStore.backgroundGradient.value,
                 borderRadius: "8px",
                 pointerEvents: "none",
-                backdropFilter: "blur(4px)"
+                backdropFilter: "blur(7px)"
             }}
         >
             <animated.span

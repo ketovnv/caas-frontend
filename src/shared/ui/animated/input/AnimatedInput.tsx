@@ -1,4 +1,3 @@
-import { useRef, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
 import { cn } from 'shared/lib';
@@ -10,10 +9,8 @@ import { AnimatedInputController } from './AnimatedInputController';
 // ============================================================================
 
 export interface AnimatedInputProps {
-  /** External controller (if not provided, creates internal one) */
-  controller?: AnimatedInputController;
-  /** Rotating placeholder texts */
-  placeholders?: string[];
+  /** Controller instance (required) */
+  controller: AnimatedInputController;
   /** Callback on submit (Enter key or button click) */
   onSubmit?: (value: string) => void;
   /** Callback on every value change */
@@ -22,28 +19,14 @@ export interface AnimatedInputProps {
   containerClass?: string;
   /** Input className */
   className?: string;
-  /** Spotlight color */
-  spotlightColor?: string;
-  /** Spotlight radius in pixels */
-  spotlightRadius?: number;
-  /** Particle color (for vanish effect) */
-  particleColor?: string;
   /** Show submit button */
   showSubmitButton?: boolean;
   /** Show focus glow effect (default: false) */
   showFocusGlow?: boolean;
-  /** Placeholder text (single, overrides placeholders array) */
-  placeholder?: string;
   /** Disabled state */
   disabled?: boolean;
   /** Input type */
   type?: string;
-  /** Step value for numeric stepper (only for type="number") */
-  step?: number;
-  /** Min value for numeric input */
-  min?: number;
-  /** Max value for numeric input */
-  max?: number;
   /** Quick-add amounts for numeric input (e.g., [10, 100]) */
   quickAmounts?: readonly number[];
 }
@@ -54,95 +37,21 @@ export interface AnimatedInputProps {
 
 export const AnimatedInput = observer(
   ({
-    controller: externalController,
+    controller: ctrl,
     className,
     containerClass,
-    placeholders = ['Type something...', 'Enter your text...', "What's on your mind?"],
-    placeholder,
     onSubmit,
     onChange,
-    spotlightColor,
-    spotlightRadius,
-    particleColor,
     showSubmitButton = true,
     showFocusGlow = false,
     disabled,
     type = 'text',
-    step = 1,
-    min,
-    max,
     quickAmounts,
   }: AnimatedInputProps) => {
     const isNumeric = type === 'number';
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Controller (external or internal)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const internalCtrlRef = useRef<AnimatedInputController | null>(null);
-    if (!externalController && !internalCtrlRef.current) {
-      internalCtrlRef.current = new AnimatedInputController({
-        placeholders: placeholder ? [placeholder] : placeholders,
-        spotlightRadius,
-        spotlightColor,
-        particleColor,
-        step,
-        min,
-        max,
-      });
-    }
-    const ctrl = externalController ?? internalCtrlRef.current!;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Lifecycle
-    // ─────────────────────────────────────────────────────────────────────────
-
-    useEffect(() => {
-      // Only manage lifecycle for internal controller
-      if (!externalController) {
-        ctrl.startPlaceholderRotation();
-        return () => ctrl.dispose();
-      }
-    }, [ctrl, externalController]);
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Event Handlers
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      ctrl.submit(onSubmit);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && ctrl.canSubmit) {
-        ctrl.submit(onSubmit);
-      }
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      ctrl.setValue(e.target.value, isNumeric);
-      onChange?.(e.target.value);
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-      ctrl.onMouseMove(e.clientX, e.clientY);
-    };
-
-    const handleFocus = () => {
-      ctrl.onFocus();
-    };
-
-    const handleBlur = () => {
-      ctrl.onBlur();
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Render
-    // ─────────────────────────────────────────────────────────────────────────
-
     return (
-      <form onSubmit={handleSubmit} className="w-full">
+      <form onSubmit={(e) => ctrl.onFormSubmit(e, onSubmit)} className="w-full">
         <div
           ref={(el) => { ctrl.containerElement = el; }}
           className={cn(
@@ -151,7 +60,7 @@ export const AnimatedInput = observer(
           )}
           onMouseEnter={ctrl.onMouseEnter}
           onMouseLeave={ctrl.onMouseLeave}
-          onMouseMove={handleMouseMove}
+          onMouseMove={ctrl.onMouseMoveEvent}
         >
           {/* Animated spotlight border - masked to show only the edge */}
           <animated.div
@@ -229,10 +138,10 @@ export const AnimatedInput = observer(
             <animated.input
               ref={(el) => { ctrl.inputElement = el; }}
               value={ctrl.value}
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
+              onChange={(e) => ctrl.onInputChange(e, isNumeric, onChange)}
+              onKeyDown={(e) => ctrl.onInputKeyDown(e, onSubmit)}
+              onFocus={ctrl.onFocus}
+              onBlur={ctrl.onBlur}
               disabled={disabled || ctrl.animating}
               type={isNumeric ? 'text' : type}
               inputMode={isNumeric ? 'decimal' : undefined}

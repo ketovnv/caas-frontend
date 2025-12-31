@@ -1,10 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
-import { walletStore } from 'entities/wallet';
-import { getExplorerAddressUrl } from 'entities/wallet';
+import { walletStore, BalanceDisplayController } from 'entities/wallet';
 import { themeStore } from 'shared/model';
-import { BalanceDisplayController } from 'entities/wallet';
 
 // ============================================================================
 // Balance Display - Shows current chain balance with animation
@@ -20,7 +18,6 @@ export const BalanceDisplay = observer(function BalanceDisplay({
   showAddress = true,
 }: BalanceDisplayProps) {
   const balance = walletStore.currentTokenBalance;
-  const chainConfig = walletStore.currentChainConfig;
 
   // Controller persists between renders
   const ctrlRef = useRef<BalanceDisplayController | null>(null);
@@ -36,11 +33,6 @@ export const BalanceDisplay = observer(function BalanceDisplay({
     ctrl.show(themeStore.springConfig);
   }, [ctrl]);
 
-  // Reset animation on chain or token change
-  useEffect(() => {
-    ctrl.reset(themeStore.springConfig);
-    ctrl.resetCopied();
-  }, [walletStore.selectedChain, walletStore.selectedToken, ctrl]);
 
   // Cleanup
   useEffect(() => {
@@ -59,9 +51,7 @@ export const BalanceDisplay = observer(function BalanceDisplay({
     ? parseFloat(balance.balance).toFixed(4)
     : '0.0000';
 
-  const explorerUrl = balance.address
-    ? getExplorerAddressUrl(chainConfig.id, balance.address)
-    : null;
+  const explorerUrl = balance.address ?? null
 
   const handleCopyAddress = () => {
     if (balance.address) {
