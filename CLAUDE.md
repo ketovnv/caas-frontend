@@ -19,7 +19,7 @@ CaaS (Crypto-as-a-Service) frontend - a platform for cryptocurrency operations. 
 - **Animation**: React Spring (@react-spring/web) + Motion
 - **State**: MobX (stores + makeAutoObservable)
 - **Auth**: Web3Auth No-Modal SDK
-- **Blockchain**: TronWeb (Shasta testnet)
+- **Blockchain**: TronWeb (Nile testnet default, Mainnet available)
 - **Mobile**: Capacitor (Android target)
 
 ## Development Commands
@@ -98,6 +98,22 @@ core.onFrame(callback);                 // Subscribe to animation frames
 core.createThrottledUpdater(handler);   // Throttle to animation frames
 ```
 
+### NetworkStore (`shared/model/network.store.ts`)
+Network selection with persistence (Mainnet/Nile):
+```typescript
+networkStore.selectedNetwork            // 'mainnet' | 'nile'
+networkStore.config                     // Full NetworkConfig
+networkStore.usdtContract               // Dynamic USDT address per network
+networkStore.setNetwork('mainnet')      // Switch networks
+```
+
+### SettingsStore (`shared/model/settings.store.ts`)
+UI settings with localStorage persistence:
+```typescript
+settingsStore.showNetworkBadge          // Toggle network badge in header
+settingsStore.showFpsMonitor            // Toggle FPS monitor overlay
+```
+
 ## Environment Variables
 
 ```bash
@@ -119,7 +135,8 @@ VITE_WEB3AUTH_CLIENT_ID=...  # Required for Web3Auth (Sapphire Devnet)
 - `model/types.ts` - Types: `ChainId = 'tron'`, `TokenId = 'native' | 'usdt'`
 - `ui/WalletCard.tsx` - Flippable card showing TRX (front) / USDT (back)
 - `ui/TransactionForm.tsx` - Send transaction form
-- `config/tokens.ts` - TRC-20 token config (USDT on Shasta testnet)
+- `config/tokens.ts` - TRC-20 token config (USDT address from networkStore)
+- `config/networks.config.ts` - Network definitions (Mainnet, Nile testnet)
 
 ### WalletCardController (`entities/wallet/model/WalletCardController.ts`)
 Encapsulates flip animation and interaction logic:
@@ -135,21 +152,19 @@ Form state management with AnimatedInputController integration:
 - Transaction submission with loading/error/success states
 
 ### Tron Integration
-- RPC helpers in `features/auth/lib/tronRpc.ts` (Nile testnet)
 - TronLink wallet adapter in `shared/lib/tronlink/`
+- Network-aware: uses `networkStore` for dynamic RPC endpoints
 
 ### RPC Provider Manager (`shared/lib/tron/rpc-provider.ts`)
 Multi-provider system with rate limiting, health checks, and automatic fallback:
 ```typescript
-rpcProviderManager.initialize(NILE_TESTNET_PROVIDERS);  // Default
-rpcProviderManager.addQuickNode('https://...', apiKey); // Add QuickNode
-rpcProviderManager.executeRequest((tronWeb) => ...);    // Auto rate-limit & fallback
-rpcProviderManager.stats                                // Health & request stats
+rpcProviderManager.initialize(networkStore.config.rpcProviders);  // From network config
+rpcProviderManager.executeRequest((tronWeb) => ...);              // Auto rate-limit & fallback
+rpcProviderManager.stats                                          // Health & request stats
 ```
 - Rate limiting per provider (e.g., TronGrid: 15 req/s)
 - Automatic fallback to next healthy provider on errors
 - Health checks every 30 seconds
-- UI components: `<RpcStatus />`, `<RpcStatusCompact />`
 
 ### Tron Resources (`shared/lib/tron/`)
 - `TronResourceService` - Calculates energy/bandwidth costs for transactions
@@ -216,66 +231,53 @@ Animated SVG icon system with gesture support:
 
 ## Animation Architecture (Imperative Controllers)
 
-**Главный принцип:** Вместо армии React хуков — элегантные классы-контроллеры.
+**Core principle:** Class-based controllers instead of multiple React Spring hooks.
 
-### Паттерн Controller
+### Controller Pattern
 
 ```typescript
-// ❌ ПЛОХО: Много хуков, сложно читать
+// ❌ Multiple hooks, hard to read
 const [spring1, api1] = useSpring(() => ({...}));
 const [spring2, api2] = useSpring(() => ({...}));
-const [spring3, api3] = useSpring(() => ({...}));
 
-// ✅ ХОРОШО: Один контроллер с чистым API
+// ✅ Single controller with clean API
 class ToggleController {
   private ctrl: Controller<State>;
-
   get thumbTransform() { return this.ctrl.springs.x.to(...); }
-  get background() { return this.ctrl.springs.bg; }
-
   animateTo(isDark: boolean) { this.ctrl.start({...}); }
 }
-
-// Использование в компоненте:
-const ctrl = new ToggleController(translate);
-<animated.div style={{ transform: ctrl.thumbTransform }} />
 ```
 
 ### Config + Controller Pattern
 
-Animation states live in `*.config.ts`, controllers in `*Controller.ts`:
+Animation states in `*.config.ts`, logic in `*Controller.ts`:
 ```typescript
-// balance-display.config.ts — состояния и конфиги
+// balance-display.config.ts
 export const HIDDEN_STATE = { opacity: 0, y: 20 };
 export const VISIBLE_STATE = { opacity: 1, y: 0 };
-export const TRAIL_CONFIG: SpringConfig = { tension: 200, friction: 20 };
 
-// BalanceDisplayController.ts — логика анимаций
+// BalanceDisplayController.ts
 export class BalanceDisplayController {
-  constructor(config?: SpringConfig) {...}
-  show(config?: SpringConfig) {...}
-  hide(config?: SpringConfig) {...}
+  show() {...}
+  hide() {...}
   dispose() {...}
 }
 ```
 
-### Примеры контроллеров
+### Controller Examples
 
-- `ColorSpring` — один OKLCH цвет с анимацией (`shared/lib/gradient.ts`)
-- `GradientSpring` — 4-цветный градиент (radial/linear/conic)
-- `DynamicColorArraySpring` — массив произвольного числа цветов
-- `IconSpring` — анимированные SVG иконки с hover/press состояниями
-- `WalletCardController` — flip-анимация карточки кошелька (`entities/wallet/`)
-- `AnimatedInputController` — анимированные инпуты с spring-значениями
+- `ColorSpring`, `GradientSpring` — OKLCH color animations (`shared/lib/gradient.ts`)
+- `IconSpring` — SVG icons with hover/press states (`shared/lib/icon-spring.ts`)
+- `WalletCardController` — card flip animation (`entities/wallet/`)
+- `AnimatedInputController` — input field animations
 
-### Принципы
+### Principles
 
-1. **Состояния в константах** — `HIDDEN_STATE`, `VISIBLE_STATE` в `*.config.ts`
-2. **Геттеры для значений** — `get mainStyle()`, `getTrailStyle(index)`
-3. **Методы для анимаций** — `show()`, `hide()`, `reset()`
-4. **Один Controller** — вместо множества `useSpring`
-5. **dispose()** — обязательный метод для cleanup
-6. **MobX integration** — `makeAutoObservable` with excluded non-observable controllers
+1. States in constants (`HIDDEN_STATE`, `VISIBLE_STATE` in `*.config.ts`)
+2. Getters for animated values (`get mainStyle()`)
+3. Methods for transitions (`show()`, `hide()`, `reset()`)
+4. Required `dispose()` method for cleanup
+5. MobX: use `makeAutoObservable` with controller exclusions
 
 ## Routing (`app/router/`)
 
