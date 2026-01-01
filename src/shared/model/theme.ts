@@ -19,9 +19,9 @@ import {
     RED_GRADIENT_LIGHT,
 } from 'shared/config';
 
-// ============================================================================
+
 // Types
-// ============================================================================
+
 
 export type ColorScheme = 'light' | 'dark';
 
@@ -36,18 +36,18 @@ const getSystemColorScheme = (): ColorScheme => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-// ============================================================================
+
 // Theme Store
-// ============================================================================
+
 
 export class ThemeStore {
     // Observable state
     colorScheme: ColorScheme = 'dark';
     boxShadow: string = STANDART_LIGHT.boxShadow;
 
-    // ─────────────────────────────────────────────────────────────────────────
+
     // Theme Springs
-    // ─────────────────────────────────────────────────────────────────────────
+
 
     // Градиенты
     readonly backgroundGradient: GradientSpring;
@@ -68,17 +68,15 @@ export class ThemeStore {
     readonly navBarButtonTextColors: ColorArraySpring;
     readonly navBarButtonActiveTextColors: ColorArraySpring;
 
-    // ─────────────────────────────────────────────────────────────────────────
+
     // Rainbow/Spectral градиенты
-    // ─────────────────────────────────────────────────────────────────────────
+
 
     readonly spectralGradient: MultiStopGradientSpring;
     readonly rainbowGradient: MultiStopGradientSpring;
     readonly redGradient: GradientSpring;
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Internal
-    // ─────────────────────────────────────────────────────────────────────────
 
     private disposers: (() => void)[] = [];
     readonly springConfig: SpringConfig;

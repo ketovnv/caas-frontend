@@ -67,7 +67,7 @@ export const BalanceDisplay = observer(function BalanceDisplay({
                     style={themeStore.accentStyle}
                     className="text-4xl font-bold tabular-nums"
                 >
-                    {balance.isLoading ? '...' : balanceStr}
+                    {balanceStr}
                 </animated.span>
             </animated.div>
 

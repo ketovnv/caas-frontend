@@ -38,7 +38,10 @@ export const WalletCard = observer(function WalletCard({
 
     const trxAmount = trxBalance?.balance || '0';
     const usdtAmount = usdtBalance?.balance || '0';
-    const isLoading = trxBalance?.isLoading || usdtBalance?.isLoading;
+
+    // Show spinner only on first load (no balance data yet)
+    const trxFirstLoad = !trxBalance;
+    const usdtFirstLoad = !usdtBalance;
 
     return (
         <div
@@ -82,11 +85,11 @@ export const WalletCard = observer(function WalletCard({
                     {/* Balance */}
                     <div className="relative text-center">
                         <div className="text-4xl font-bold text-white tabular-nums">
-                            {isLoading ? (
-                                    <span
-                                        className="inline-block w-6 h-6 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin"/>
-                                ) :
-                                <AnimatedCounter value={parseFloat(trxAmount)} decimals={2}/>}
+                            {trxFirstLoad ? (
+                                <span className="inline-block w-6 h-6 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin"/>
+                            ) : (
+                                <AnimatedCounter value={parseFloat(trxAmount)} decimals={2}/>
+                            )}
                         </div>
                         <div className="text-xl text-red-400 font-semibold mt-1">TRX</div>
                     </div>
@@ -121,10 +124,11 @@ export const WalletCard = observer(function WalletCard({
                     {/* Balance */}
                     <div className="relative text-center">
                         <div className="text-4xl font-bold text-white tabular-nums">
-                            {isLoading ? (
-                                <span
-                                    className="inline-block w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"/>
-                            ) : <AnimatedCounter value={parseFloat(usdtAmount)} decimals={2}/>}
+                            {usdtFirstLoad ? (
+                                <span className="inline-block w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"/>
+                            ) : (
+                                <AnimatedCounter value={parseFloat(usdtAmount)} decimals={2}/>
+                            )}
                         </div>
                         <div className="text-xl text-emerald-400 font-semibold mt-1">USDT</div>
                     </div>

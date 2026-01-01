@@ -1,12 +1,8 @@
-// ============================================================================
 // Network Configuration
-// ============================================================================
 
 import type { RpcProviderConfig } from 'shared/lib/tron';
 
-// ============================================================================
 // Types
-// ============================================================================
 
 export type NetworkId = 'mainnet' | 'nile';
 
@@ -33,9 +29,7 @@ export interface NetworkConfig {
   badgeColor: string;
 }
 
-// ============================================================================
 // RPC Providers
-// ============================================================================
 
 /** Nile Testnet providers */
 const NILE_PROVIDERS: RpcProviderConfig[] = [
@@ -69,9 +63,9 @@ const MAINNET_PROVIDERS: RpcProviderConfig[] = [
   },
 ];
 
-// ============================================================================
+
 // Network Definitions
-// ============================================================================
+
 
 export const NETWORKS: Record<NetworkId, NetworkConfig> = {
   mainnet: {
@@ -107,9 +101,9 @@ export const DEFAULT_NETWORK: NetworkId = 'nile';
 /** All network IDs */
 export const NETWORK_IDS: NetworkId[] = ['mainnet', 'nile'];
 
-// ============================================================================
+
 // Helpers
-// ============================================================================
+
 
 /** Get network config by ID */
 export function getNetworkConfig(networkId: NetworkId): NetworkConfig {

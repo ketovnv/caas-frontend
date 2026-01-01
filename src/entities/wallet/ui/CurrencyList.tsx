@@ -123,16 +123,12 @@ const CurrencyListItem = observer(function CurrencyListItem({
             {item.symbol}
           </animated.span>
           <span className="font-bold text-lg tabular-nums">
-            {item.isLoading ? (
-              <span className="inline-block w-4 h-4 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
-            ) : (
-              <AnimatedCounter
-                value={item.balance}
-                decimals={item.balance < 0.01 ? 4 : 2}
-                duration={800}
-                easing="spring"
-              />
-            )}
+            <AnimatedCounter
+              value={item.balance}
+              decimals={item.balance < 0.01 ? 4 : 2}
+              duration={800}
+              easing="spring"
+            />
           </span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">

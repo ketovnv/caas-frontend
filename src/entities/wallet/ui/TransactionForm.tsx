@@ -5,11 +5,8 @@ import { themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
 import { walletStore } from '../model/wallet.store';
 import { transactionFormStore, QUICK_AMOUNTS } from '../model/TransactionFormStore';
-import { TransactionCost } from './TransactionCost';
 
-// ============================================================================
 // Types
-// ============================================================================
 
 interface TransactionFormProps {
   onSend?: (amount: string, address: string) => Promise<string>;
@@ -18,9 +15,7 @@ interface TransactionFormProps {
   className?: string;
 }
 
-// ============================================================================
 // Component
-// ============================================================================
 
 export const TransactionForm = observer(function TransactionForm({
   onSend,
@@ -29,9 +24,7 @@ export const TransactionForm = observer(function TransactionForm({
 }: TransactionFormProps) {
   const store = transactionFormStore;
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Trail animation for form elements
-  // ─────────────────────────────────────────────────────────────────────────
 
   const trail = useTrail(5, {
     from: { opacity: 0, y: 24 },
@@ -43,9 +36,7 @@ export const TransactionForm = observer(function TransactionForm({
     delay: 80,
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Render
-  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className={cn('w-full flex flex-col gap-6', className)}>
@@ -261,35 +252,6 @@ export const TransactionForm = observer(function TransactionForm({
         </RippleButton>
       </animated.div>
 
-      {/* Transaction Cost - only for USDT */}
-      {walletStore.selectedToken === 'usdt' && (
-        <animated.div
-          style={{
-            opacity: trail[4]?.opacity,
-            transform: trail[4]?.y.to(y => `translateY(${y}px)`),
-          }}
-        >
-          <TransactionCost
-            recipientAddress={store.address}
-            amount={store.amount}
-          />
-        </animated.div>
-      )}
-
-      {/* Fee note for TRX */}
-      {walletStore.selectedToken === 'native' && (
-        <animated.div
-          style={{
-            opacity: trail[4]?.opacity,
-            transform: trail[4]?.y.to(y => `translateY(${y}px)`),
-          }}
-          className="text-center"
-        >
-          <animated.p style={themeStore.grayStyle} className="text-xs">
-            Комісія ~0.1 TRX (bandwidth)
-          </animated.p>
-        </animated.div>
-      )}
     </div>
   );
 });

@@ -1,19 +1,16 @@
-// ============================================================================
 // Resource Store - Energy & Bandwidth Management
-// ============================================================================
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import {
   tronResourceService,
   type WalletResources,
   type TransactionCostEstimate,
+  sunToTrx,
 } from 'shared/lib/tron';
 import { remoteConfigStore } from 'shared/lib/remote-config';
 import { getTokenAddress } from '../config/tokens';
 
-// ============================================================================
 // ResourceStore
-// ============================================================================
 
 class ResourceStore {
   // Current wallet resources
@@ -34,9 +31,7 @@ class ResourceStore {
     makeAutoObservable(this);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Computed
-  // ─────────────────────────────────────────────────────────────────────────
 
   /** Available energy */
   get availableEnergy(): number {
@@ -65,8 +60,8 @@ class ResourceStore {
 
   /** Free bandwidth remaining */
   get freeBandwidthRemaining(): number {
-    if (!this.resources) return 5000; // Default
-    return this.resources.freeBandwidth - this.resources.freeBandwidthUsed;
+    if (!this.resources) return 0;
+    return Math.max(0, this.resources.freeBandwidth - this.resources.freeBandwidthUsed);
   }
 
   /** Has any staked resources */
@@ -102,8 +97,45 @@ class ResourceStore {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Actions
+  // TRX Transfer Cost (bandwidth only)
   // ─────────────────────────────────────────────────────────────────────────
+
+  /** Bandwidth needed for TRX transfer */
+  get trxBandwidthNeeded(): number {
+    return remoteConfigStore.tron.bandwidthPerTrxTransfer;
+  }
+
+  /** Bandwidth shortfall for TRX transfer */
+  get trxBandwidthToBurn(): number {
+    return Math.max(0, this.trxBandwidthNeeded - this.availableBandwidth);
+  }
+
+  /** TRX cost for bandwidth (for TRX transfers) */
+  get trxTransferCost(): number {
+    if (this.trxBandwidthToBurn <= 0) return 0;
+    const costSun = this.trxBandwidthToBurn * remoteConfigStore.tron.bandwidthUnitPrice;
+    return sunToTrx(costSun);
+  }
+
+  /** Is TRX transfer free (has enough bandwidth) */
+  get isTrxTransferFree(): boolean {
+    return this.trxBandwidthToBurn <= 0;
+  }
+
+  /**
+   * Calculate max sendable TRX amount
+   * Subtracts bandwidth fee from balance if bandwidth is insufficient
+   */
+  getMaxSendableTrx(balance: number): number {
+    if (this.isTrxTransferFree) {
+      return balance;
+    }
+    // Reserve bandwidth fee from balance
+    const maxAmount = balance - this.trxTransferCost;
+    return Math.max(0, maxAmount);
+  }
+
+    // Actions
 
   /**
    * Fetch wallet resources (energy & bandwidth)
@@ -245,8 +277,6 @@ class ResourceStore {
   };
 }
 
-// ============================================================================
 // Singleton Export
-// ============================================================================
 
 export const resourceStore = new ResourceStore();

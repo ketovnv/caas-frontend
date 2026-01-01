@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useTrail, animated, config } from '@react-spring/web';
+import { useTrail, useSpring, animated, config } from '@react-spring/web';
 import { cn } from 'shared/lib';
 import { GlowingEffect } from 'shared/ui/animated/glow/GlowingEffect';
 import { authStore } from '../model/auth.store';
@@ -10,6 +10,86 @@ import type { LoginProvider } from '@/shared/lib/web3auth';
 
 // Icons from svg-icons
 import { Google, Facebook, Discord, Twitter, Email, Phone, Metamask, TronLink } from 'shared/ui/animated/svg-icons';
+
+// ============================================================================
+// Loading Spinner Component
+// ============================================================================
+
+interface LoadingSpinnerProps {
+    color?: string;
+    size?: number;
+}
+
+function LoadingSpinner({ color = '#fff', size = 96 }: LoadingSpinnerProps) {
+    // Pulsing animation
+    const pulse = useSpring({
+        from: { scale: 0.8, opacity: 0.4 },
+        to: async (next) => {
+            while (true) {
+                await next({ scale: 1.1, opacity: 0.8 });
+                await next({ scale: 0.8, opacity: 0.4 });
+            }
+        },
+        config: { tension: 120, friction: 14 },
+    });
+
+    // Rotation animation
+    const rotation = useSpring({
+        from: { rotate: 0 },
+        to: { rotate: 360 },
+        loop: true,
+        config: { duration: 1500 },
+    });
+
+    return (
+        <div className="relative" style={{ width: size, height: size }}>
+            {/* Outer pulsing ring */}
+            <animated.div
+                className="absolute inset-0 rounded-full"
+                style={{
+                    scale: pulse.scale,
+                    opacity: pulse.opacity,
+                    border: `3px solid ${color}`,
+                    filter: `drop-shadow(0 0 8px ${color})`,
+                }}
+            />
+            {/* Inner spinning arc */}
+            <animated.svg
+                className="absolute inset-0"
+                viewBox="0 0 100 100"
+                style={{ rotate: rotation.rotate.to(r => `${r}deg`) }}
+            >
+                <defs>
+                    <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor={color} stopOpacity="1" />
+                        <stop offset="100%" stopColor={color} stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    stroke="url(#spinnerGradient)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray="180 360"
+                />
+            </animated.svg>
+            {/* Center dot */}
+            <animated.div
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                style={{
+                    width: size * 0.15,
+                    height: size * 0.15,
+                    backgroundColor: color,
+                    scale: pulse.scale,
+                    boxShadow: `0 0 12px ${color}`,
+                }}
+            />
+        </div>
+    );
+}
 
 // ============================================================================
 // Input Panel Controller Instance
@@ -127,21 +207,8 @@ const LoginCard = observer(function LoginCard({
 
             {/* Icon */}
             <span className="relative z-10 transition-transform duration-200 group-hover:scale-110">
-                {loading ? (
-                    <svg className="w-24 h-24 animate-spin text-zinc-400" viewBox="0 0 32 32">
-                        <circle
-                            className="opacity-25"
-                            cx="24" cy="24" r="10"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                            fill="none"
-                        />
-                        <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                    </svg>
+                {(loading || isActive) ? (
+                    <LoadingSpinner color={accentColor} size={96} />
                 ) : (
                     icon
                 )}
@@ -162,7 +229,8 @@ const LoginCard = observer(function LoginCard({
 export const LoginOptions = observer(function LoginOptions({ className }: LoginOptionsProps) {
     const { status, selectedProvider, error, inputMode, emailInput, phoneInput } = authStore;
 
-    const isLoading = status === 'connecting';
+    // Loading when provider is selected (button clicked) and not yet connected/errored
+    const isLoading = selectedProvider !== null && status !== 'connected' && status !== 'error';
     const inputCtrl = inputPanelController;
 
     // All login options

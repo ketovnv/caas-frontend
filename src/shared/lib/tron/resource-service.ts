@@ -61,22 +61,27 @@ class TronResourceService {
     const raw = await this.getAccountResources(address);
     if (!raw) return null;
 
-    const freeBandwidth = raw.freeNetLimit || 5000;
-    const freeBandwidthUsed = raw.freeNetUsed || 0;
-    const stakedBandwidth = raw.NetLimit || 0;
-    const stakedBandwidthUsed = raw.NetUsed || 0;
-    const energy = raw.EnergyLimit || 0;
-    const energyUsed = raw.EnergyUsed || 0;
+    // Use actual values from API, no fallbacks
+    const freeBandwidth = raw.freeNetLimit ?? 0;
+    const freeBandwidthUsed = raw.freeNetUsed ?? 0;
+    const stakedBandwidth = raw.NetLimit ?? 0;
+    const stakedBandwidthUsed = raw.NetUsed ?? 0;
+    const energy = raw.EnergyLimit ?? 0;
+    const energyUsed = raw.EnergyUsed ?? 0;
+
+    // Calculate available bandwidth (free + staked - used)
+    const availableFreeBandwidth = Math.max(0, freeBandwidth - freeBandwidthUsed);
+    const availableStakedBandwidth = Math.max(0, stakedBandwidth - stakedBandwidthUsed);
 
     return {
       freeBandwidth,
       freeBandwidthUsed,
       stakedBandwidth,
       stakedBandwidthUsed,
-      totalBandwidth: (freeBandwidth - freeBandwidthUsed) + (stakedBandwidth - stakedBandwidthUsed),
+      totalBandwidth: availableFreeBandwidth + availableStakedBandwidth,
       energy,
       energyUsed,
-      totalEnergy: energy - energyUsed,
+      totalEnergy: Math.max(0, energy - energyUsed),
     };
   }
 

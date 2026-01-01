@@ -16,9 +16,9 @@ import {
   getAnimationConfig,
 } from '../config/router-transition.config';
 
-// ─────────────────────────────────────────────────────────────
+
 // Lazy loaded pages
-// ─────────────────────────────────────────────────────────────
+
 
 const HomePage = lazy(() => import('pages/home').then(m => ({ default: m.HomePage })));
 const SettingsPage = lazy(() => import('pages/settings').then(m => ({ default: m.SettingsPage })));
@@ -31,9 +31,7 @@ const routes: Record<Route, ComponentType> = {
   'not-found': NotFoundPage
 };
 
-// ─────────────────────────────────────────────────────────────
 // Loading
-// ─────────────────────────────────────────────────────────────
 
 function PageLoader() {
   return (
@@ -43,9 +41,9 @@ function PageLoader() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+
 // Swipe Gesture Hook (uses SwipeController)
-// ─────────────────────────────────────────────────────────────
+
 
 function useSwipeNavigation() {
   const ctrl = swipeController;
@@ -95,9 +93,7 @@ function useSwipeNavigation() {
   return { bind, ctrl };
 }
 
-// ─────────────────────────────────────────────────────────────
 // Main Component
-// ─────────────────────────────────────────────────────────────
 
 export const AppRouter = observer(function AppRouter() {
   const { currentRoute, previousRoute, transitionConfig } = router;

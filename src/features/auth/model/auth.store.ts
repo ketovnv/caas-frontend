@@ -153,6 +153,31 @@ class AuthStore {
   // ─────────────────────────────────────────────────────────
 
   /**
+   * Wait for Web3Auth initialization to complete
+   * Returns true if should proceed with connect, false if already connected
+   */
+  private waitForReady = (): Promise<boolean> => {
+    if (this.status === 'connected') {
+      return Promise.resolve(false); // Already connected, don't proceed
+    }
+    if (this.status === 'ready' && web3AuthService.isReadyForConnection) {
+      return Promise.resolve(true); // Ready to connect
+    }
+    return new Promise((resolve) => {
+      const checkStatus = () => {
+        if (this.status === 'connected') {
+          resolve(false); // Session was restored, don't proceed
+        } else if ((this.status === 'ready' || this.status === 'error') && web3AuthService.isReadyForConnection) {
+          resolve(true); // Ready to connect
+        } else {
+          setTimeout(checkStatus, 100);
+        }
+      };
+      checkStatus();
+    });
+  };
+
+  /**
    * Connect with social provider (no-modal - custom UI)
    * Requires authConnectionId configured in Dashboard
    */
@@ -164,10 +189,27 @@ class AuthStore {
 
     hapticsStore.playWeb3('connectStart');
 
+    // Show spinner on button immediately
     runInAction(() => {
-      this.status = 'connecting';
       this.selectedProvider = provider;
       this.error = null;
+    });
+
+    // Wait for Web3Auth to be ready (handles both initializing and internal connecting states)
+    if (this.status === 'initializing' || !web3AuthService.isReadyForConnection) {
+      const shouldProceed = await this.waitForReady();
+      if (!shouldProceed) {
+        // Session was restored while waiting, just navigate to home
+        runInAction(() => {
+          this.selectedProvider = null;
+        });
+        router.navigate('home');
+        return;
+      }
+    }
+
+    runInAction(() => {
+      this.status = 'connecting';
     });
 
     try {
@@ -180,24 +222,28 @@ class AuthStore {
         throw new Error('Connection failed - no provider returned');
       }
 
-      const userInfo = await web3AuthService.getUserInfo();
-
+      // Set connected immediately and navigate
       runInAction(() => {
         this.status = 'connected';
         this.provider = web3authProvider;
-        this.userInfo = userInfo;
-        this.selectedProvider = null;
         this.walletType = 'web3auth';
+        this.selectedProvider = null;
       });
-
-      // Fetch balances after connect
-      walletStore.fetchBalances();
-      walletStore.startAutoRefresh();
 
       hapticsStore.playWeb3('connectSuccess');
 
-      // Redirect to wallet after successful login
+      // Navigate IMMEDIATELY after auth - home page has loading states
       router.navigate('home');
+
+      // Fetch user info and balances in background
+      web3AuthService.getUserInfo().then(userInfo => {
+        runInAction(() => {
+          this.userInfo = userInfo;
+        });
+      });
+
+      walletStore.fetchBalances();
+      walletStore.startAutoRefresh();
 
     } catch (error) {
       runInAction(() => {

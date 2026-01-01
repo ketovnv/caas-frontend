@@ -11,22 +11,17 @@ import {
   DRAG_SCALE_FACTOR,
   MIN_DRAG_SCALE,
   type DragAnimState,
-} from '../config/router-transition.config';
+} from '../config/router-transition.config'
 
-// ============================================================================
 // SwipeController - Manages swipe gesture state for page navigation
-// ============================================================================
 
 export class SwipeController {
-  // ─────────────────────────────────────────────────────────────────────────
+
   // MobX Observable State
-  // ─────────────────────────────────────────────────────────────────────────
 
   isDragging = false;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Internal State (not observable)
-  // ─────────────────────────────────────────────────────────────────────────
+    // Internal State (not observable)
 
   private ctrl: Controller<DragAnimState>;
 
@@ -41,9 +36,7 @@ export class SwipeController {
     }, { autoBind: true });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Animated Values (for component binding)
-  // ─────────────────────────────────────────────────────────────────────────
+    // Animated Values (for component binding)
 
   get springs() {
     return this.ctrl.springs;
@@ -61,9 +54,7 @@ export class SwipeController {
     return this.ctrl.springs.dragRotateY;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Actions
-  // ─────────────────────────────────────────────────────────────────────────
+    // Actions
 
   /**
    * Update drag position during active gesture
@@ -162,17 +153,13 @@ export class SwipeController {
     return this.ctrl.springs.dragRotateY.get();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Lifecycle
-  // ─────────────────────────────────────────────────────────────────────────
 
   dispose() {
     this.ctrl.stop();
   }
 }
 
-// ============================================================================
 // Singleton instance
-// ============================================================================
 
 export const swipeController = new SwipeController();

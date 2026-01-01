@@ -216,6 +216,13 @@ class WalletStore {
         await this.fetchTokenBalance(provider, 'tron', 'usdt');
         console.log('[WalletStore] USDT balance done');
 
+        // Fetch resources (energy & bandwidth)
+        const address = this.currentAddress;
+        if (address) {
+            await resourceStore.fetchResources(address);
+            console.log('[WalletStore] Resources done');
+        }
+
         runInAction(() => {
             this.isRefreshing = false;
         });
@@ -465,9 +472,10 @@ class WalletStore {
         // Switch RPC providers
         rpcProviderManager.switchNetwork(networkStore.config.rpcProviders);
 
-        // Clear current balances
+        // Clear current balances and resources
         this.balances.clear();
         this.tokenBalances.clear();
+        resourceStore.reset();
 
         // Refresh if connected
         if (authStore.isConnected) {

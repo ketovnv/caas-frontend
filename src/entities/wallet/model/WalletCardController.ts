@@ -4,9 +4,8 @@ import { CARD_FLIP_CONFIG, CARD_FLIPPED_SCALE, CARD_DEFAULT_SCALE } from '../con
 import { walletStore } from './wallet.store';
 import type { TokenId } from './types';
 
-// ============================================================================
+
 // WalletCard Controller - Animation & State Management
-// ============================================================================
 
 interface FlipSpringState {
   rotation: number;
@@ -14,9 +13,8 @@ interface FlipSpringState {
 }
 
 export class WalletCardController {
-  // ─────────────────────────────────────────────────────────
+
   // State
-  // ─────────────────────────────────────────────────────────
 
   /** Is card flipped (false = TRX, true = USDT) */
   isFlipped = false;
@@ -33,9 +31,9 @@ export class WalletCardController {
   /** Cleanup functions */
   private disposers: (() => void)[] = [];
 
-  // ─────────────────────────────────────────────────────────
+
   // Constructor
-  // ─────────────────────────────────────────────────────────
+
 
   constructor() {
     // Initialize spring
@@ -72,10 +70,7 @@ export class WalletCardController {
     );
     this.disposers.push(disposeReaction);
   }
-
-  // ─────────────────────────────────────────────────────────
   // Computed
-  // ─────────────────────────────────────────────────────────
 
   /** Current token based on flip state */
   get currentToken(): TokenId {
@@ -104,9 +99,7 @@ export class WalletCardController {
     return 'Hover to preview, click to lock';
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Actions
-  // ─────────────────────────────────────────────────────────
+    // Actions
 
   private checkMobile = () => {
     this.isMobile = window.matchMedia('(hover: none)').matches;
@@ -155,9 +148,7 @@ export class WalletCardController {
     this.isLocked = false;
   }
 
-  // ─────────────────────────────────────────────────────────
   // Lifecycle
-  // ─────────────────────────────────────────────────────────
 
   dispose() {
     this.disposers.forEach((fn) => fn());
@@ -165,8 +156,6 @@ export class WalletCardController {
   }
 }
 
-// ============================================================================
 // Singleton Export
-// ============================================================================
 
 export const walletCardController = new WalletCardController();

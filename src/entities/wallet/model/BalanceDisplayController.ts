@@ -11,9 +11,7 @@ import {
   type TrailItemState,
 } from '../config/balance-display.config.ts';
 
-// ============================================================================
 // Balance Display Controller - Animation + MobX state
-// ============================================================================
 
 export class BalanceDisplayController {
   // MobX observable state
@@ -72,9 +70,7 @@ export class BalanceDisplayController {
     }
   }
 
-  // ─────────────────────────────────────────────────────────
   // Getters for animated values
-  // ─────────────────────────────────────────────────────────
 
   get mainSprings() {
     return this.mainCtrl.springs;
@@ -96,9 +92,7 @@ export class BalanceDisplayController {
     };
   }
 
-  // ─────────────────────────────────────────────────────────
   // Animation methods
-  // ─────────────────────────────────────────────────────────
 
   show(config?: SpringConfig) {
     const springConfig = config ?? TRAIL_CONFIG;
@@ -148,9 +142,7 @@ export class BalanceDisplayController {
     });
   }
 
-  // ─────────────────────────────────────────────────────────
   // Copy to clipboard
-  // ─────────────────────────────────────────────────────────
 
   async copyAddress(address: string) {
     if (!address) return;
@@ -185,9 +177,7 @@ export class BalanceDisplayController {
     }
   }
 
-  // ─────────────────────────────────────────────────────────
   // Lifecycle
-  // ─────────────────────────────────────────────────────────
 
   dispose() {
     this.disposer?.();
@@ -200,9 +190,7 @@ export class BalanceDisplayController {
   }
 }
 
-// ============================================================================
 // Singleton Instance - lazy initialized
-// ============================================================================
 
 let _balanceDisplayController: BalanceDisplayController | null = null;
 

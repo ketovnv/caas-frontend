@@ -1,18 +1,12 @@
-// ============================================================================
-// Transaction Cost Display
-// ============================================================================
-
 import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { animated } from '@react-spring/web';
-import { themeStore } from 'shared/model';
+import { themeStore, networkStore } from 'shared/model';
 import { cn } from 'shared/lib';
 import { resourceStore } from '../model/resource.store';
 import { walletStore } from '../model/wallet.store';
 
-// ============================================================================
 // Types
-// ============================================================================
 
 interface TransactionCostProps {
   recipientAddress: string;
@@ -20,9 +14,7 @@ interface TransactionCostProps {
   className?: string;
 }
 
-// ============================================================================
 // Icons
-// ============================================================================
 
 function EnergyIcon({ className }: { className?: string }) {
   return (
@@ -40,19 +32,17 @@ function BandwidthIcon({ className }: { className?: string }) {
   );
 }
 
-// ============================================================================
 // Resource Bar
-// ============================================================================
 
 interface ResourceBarProps {
   label: string;
   icon: React.ReactNode;
   available: number;
   needed: number;
-  unit: string;
+  unit?: string;
 }
 
-function ResourceBar({ label, icon, available, needed, unit }: ResourceBarProps) {
+function ResourceBar({ label, icon, available, needed, unit = '' }: ResourceBarProps) {
   const percentage = needed > 0 ? Math.min(100, (available / needed) * 100) : 100;
   const hasEnough = available >= needed;
 
@@ -84,7 +74,7 @@ function ResourceBar({ label, icon, available, needed, unit }: ResourceBarProps)
 }
 
 // ============================================================================
-// Main Component
+// Main Component - Works for both TRX and USDT
 // ============================================================================
 
 export const TransactionCost = observer(function TransactionCost({
@@ -92,29 +82,41 @@ export const TransactionCost = observer(function TransactionCost({
   amount,
   className,
 }: TransactionCostProps) {
-  const { costEstimate, isEstimating, availableEnergy, availableBandwidth } = resourceStore;
-  const { currentAddress, currentBalance } = walletStore;
+  const {
+    costEstimate,
+    isEstimating,
+    availableEnergy,
+    availableBandwidth,
+    trxBandwidthNeeded,
+    trxTransferCost,
+    isTrxTransferFree,
+    isLoadingResources,
+  } = resourceStore;
+  const { currentAddress, currentBalance, selectedToken } = walletStore;
 
-  // Fetch resources and estimate cost when params change
+  const isNative = selectedToken === 'native';
+  const hasAmount = amount && parseFloat(amount) > 0;
+
+  // Estimate cost for USDT when params change
+  // Resources are fetched by walletStore.fetchBalances(), no need to duplicate
   useEffect(() => {
     if (!currentAddress) return;
 
-    // Fetch wallet resources
-    resourceStore.fetchResources(currentAddress);
-
-    // Estimate cost if we have recipient and amount
-    if (recipientAddress && amount && parseFloat(amount) > 0) {
+    // Estimate cost only for USDT when we have recipient and amount
+    if (!isNative && recipientAddress && hasAmount) {
       const trxBalance = parseFloat(currentBalance?.balance || '0');
       resourceStore.estimateCost(currentAddress, recipientAddress, amount, trxBalance);
     } else {
       resourceStore.clearEstimate();
     }
-  }, [currentAddress, recipientAddress, amount]);
+  }, [currentAddress, recipientAddress, amount, isNative, networkStore.selectedNetwork]);
 
-  // Don't show if no estimate needed
-  if (!recipientAddress || !amount || parseFloat(amount) <= 0) {
+  // Don't show if no address
+  if (!currentAddress) {
     return null;
   }
+
+  const isLoading = isLoadingResources || isEstimating;
 
   return (
     <div
@@ -128,15 +130,60 @@ export const TransactionCost = observer(function TransactionCost({
       {/* Header */}
       <div className="flex items-center justify-between">
         <animated.span style={themeStore.grayStyle} className="text-sm font-medium">
-          Вартість транзакції
+          {isNative ? 'Вартість TRX переказу' : 'Вартість USDT переказу'}
         </animated.span>
-        {isEstimating && (
+        {isLoading && (
           <div className="w-4 h-4 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
         )}
       </div>
 
-      {/* Resources */}
-      {costEstimate && (
+      {/* TRX Transfer - Bandwidth only */}
+      {isNative && (
+        <>
+          {resourceStore.resources ? (
+            <>
+              <ResourceBar
+                label="Bandwidth"
+                icon={<BandwidthIcon className="w-3.5 h-3.5" />}
+                available={availableBandwidth}
+                needed={trxBandwidthNeeded}
+                unit="bytes"
+              />
+
+              {/* Total Cost */}
+              <div className="pt-2 border-t border-zinc-800/50">
+                <div className="flex items-center justify-between">
+                  <animated.span style={themeStore.grayStyle} className="text-sm font-medium">
+                    Комісія
+                  </animated.span>
+                  <span className={cn(
+                    'text-sm font-bold tabular-nums',
+                    isTrxTransferFree ? 'text-emerald-400' : 'text-amber-400'
+                  )}>
+                    {isTrxTransferFree
+                      ? 'Безкоштовно'
+                      : `${trxTransferCost.toFixed(4)} TRX`
+                    }
+                  </span>
+                </div>
+
+                {!isTrxTransferFree && (
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Недостатньо bandwidth — буде списано з балансу
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="py-2 text-center">
+              <span className="text-zinc-500 text-sm">Завантаження ресурсів...</span>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* USDT Transfer - Energy + Bandwidth */}
+      {!isNative && costEstimate && (
         <>
           {/* Energy */}
           <ResourceBar
@@ -144,7 +191,6 @@ export const TransactionCost = observer(function TransactionCost({
             icon={<EnergyIcon className="w-3.5 h-3.5" />}
             available={availableEnergy}
             needed={costEstimate.energyNeeded}
-            unit=""
           />
 
           {/* Bandwidth */}
@@ -213,10 +259,19 @@ export const TransactionCost = observer(function TransactionCost({
         </>
       )}
 
-      {/* Loading state */}
-      {isEstimating && !costEstimate && (
+      {/* USDT - Loading state when no estimate yet but recipient provided */}
+      {!isNative && !costEstimate && recipientAddress && hasAmount && (
         <div className="py-4 text-center">
           <span className="text-zinc-500 text-sm">Розрахунок вартості...</span>
+        </div>
+      )}
+
+      {/* USDT - No recipient hint */}
+      {!isNative && !recipientAddress && (
+        <div className="py-2 text-center">
+          <span className="text-zinc-500 text-xs">
+            Введіть адресу отримувача для розрахунку
+          </span>
         </div>
       )}
     </div>

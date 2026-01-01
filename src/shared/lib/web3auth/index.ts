@@ -3,6 +3,13 @@ import type { IProvider } from '@web3auth/no-modal';
 import { WEB3AUTH_CONFIG, AUTH_CONNECTION_IDS } from './config';
 import type { LoginProvider } from './types';
 
+// Web3Auth SDK status values (v10 uses string literals)
+const SDK_STATUS = {
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  READY: 'ready',
+} as const;
+
 // Re-export IProvider from @web3auth/no-modal
 export type { IProvider } from '@web3auth/no-modal';
 
@@ -71,6 +78,14 @@ class Web3AuthService {
     return this.instance?.connected ?? false;
   }
 
+  /** Check if Web3Auth is ready for new connection (not already connecting) */
+  get isReadyForConnection(): boolean {
+    // Check our flag AND the SDK's internal status
+    const sdkStatus = this.instance?.status;
+    const sdkNotConnecting = sdkStatus !== SDK_STATUS.CONNECTING;
+    return this._isInitialized && !this._isConnecting && sdkNotConnecting;
+  }
+
   get provider(): IProvider | null {
     return this.instance?.provider ?? null;
   }
@@ -110,6 +125,18 @@ class Web3AuthService {
       }
     }
 
+    // Wait for SDK to finish any internal connecting (e.g., session restoration)
+    if (this.instance.status === SDK_STATUS.CONNECTING) {
+      console.log('[Web3Auth] Waiting for SDK to finish internal connecting...');
+      await this._waitForSdkReady();
+
+      // After waiting, check if we're now connected (session was restored)
+      if (this.instance.connected && this.instance.provider) {
+        console.log('[Web3Auth] Session restored while waiting');
+        return this.instance.provider;
+      }
+    }
+
     this._isConnecting = true;
 
     try {
@@ -138,14 +165,32 @@ class Web3AuthService {
         loginParams.extraLoginOptions = { login_hint: options.phone };
       }
 
-      const web3authProvider = await this.instance.connectTo(
-        WALLET_CONNECTORS.AUTH,
-        loginParams
-      );
+      // Retry mechanism for "Already connecting" errors
+      const maxRetries = 10;
+      const retryDelay = 500;
 
-      return web3authProvider;
-    } catch (error) {
-      throw error;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const web3authProvider = await this.instance.connectTo(
+            WALLET_CONNECTORS.AUTH,
+            loginParams
+          );
+          return web3authProvider;
+        } catch (err) {
+          const errorMessage = (err as Error).message || '';
+          // If "Already connecting" error, wait and retry
+          if (errorMessage.includes('Already connecting') || errorMessage.includes('not ready')) {
+            if (attempt < maxRetries - 1) {
+              console.log(`[Web3Auth] Waiting for ready state, attempt ${attempt + 1}/${maxRetries}`);
+              await new Promise(r => setTimeout(r, retryDelay));
+              continue;
+            }
+          }
+          throw err;
+        }
+      }
+
+      throw new Error('Max retries exceeded');
     } finally {
       this._isConnecting = false;
     }
@@ -196,6 +241,36 @@ class Web3AuthService {
   // ─────────────────────────────────────────────────────────
   // Session Management
   // ─────────────────────────────────────────────────────────
+
+  /**
+   * Wait for SDK to exit CONNECTING status
+   * Used to avoid "Already connecting" errors during session restoration
+   */
+  private _waitForSdkReady(timeoutMs = 10000): Promise<void> {
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+
+      const checkStatus = () => {
+        // SDK is no longer connecting
+        if (this.instance?.status !== SDK_STATUS.CONNECTING) {
+          resolve();
+          return;
+        }
+
+        // Timeout
+        if (Date.now() - startTime > timeoutMs) {
+          console.warn('[Web3Auth] Timeout waiting for SDK ready');
+          resolve();
+          return;
+        }
+
+        // Check again in 100ms
+        setTimeout(checkStatus, 100);
+      };
+
+      checkStatus();
+    });
+  }
 
   /**
    * Wait for session restoration (v10 restores asynchronously after init)

@@ -4,7 +4,6 @@ import { LoginButton, authStore } from 'features/auth';
 import { WalletCard, walletStore, TransactionForm, TransactionCost, TokenSelector } from 'entities/wallet';
 import { transactionFormStore } from 'entities/wallet/model/TransactionFormStore';
 import { PageLayout, Panel } from 'shared/ui';
-import { themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
 
 // ============================================================================
@@ -114,7 +113,7 @@ export const HomePage = observer(function HomePage() {
                         )}
                     </animated.div>
 
-                    {/* Panel 3: Transaction Cost / Resources */}
+                    {/* Panel 3: Transaction Cost (unified for TRX and USDT) */}
                     <animated.div
                         style={{
                             opacity: trail[2]?.opacity,
@@ -122,16 +121,10 @@ export const HomePage = observer(function HomePage() {
                         }}
                         className="space-y-4"
                     >
-                        {/* Transaction Cost (for USDT) */}
-                        {walletStore.selectedToken === 'usdt' && (
-                            <TransactionCost
-                                recipientAddress={transactionFormStore.address}
-                                amount={transactionFormStore.amount}
-                            />
-                        )}
-
-                        {/* Resources Panel (always visible) */}
-                        <ResourcesPanel />
+                        <TransactionCost
+                            recipientAddress={transactionFormStore.address}
+                            amount={transactionFormStore.amount}
+                        />
 
                         {/* Disconnect - desktop only */}
                         <button
@@ -203,78 +196,3 @@ const AddressDisplay = observer(function AddressDisplay({ address, className }: 
     );
 });
 
-// ============================================================================
-// Resources Panel - Shows energy/bandwidth stats
-// ============================================================================
-
-import { resourceStore } from 'entities/wallet/model/resource.store';
-
-const ResourcesPanel = observer(function ResourcesPanel() {
-    const { availableEnergy, availableBandwidth, totalEnergy, totalBandwidth, isLoading } = resourceStore;
-
-    return (
-        <Panel title="Resources" subtitle="Your TRON network resources" variant="default" padding="md">
-            <div className="space-y-4">
-                {/* Energy */}
-                <div>
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                        <div className="flex items-center gap-2 text-zinc-400">
-                            <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            <span>Energy</span>
-                        </div>
-                        <span className="text-zinc-300 tabular-nums">
-                            {isLoading ? '...' : availableEnergy.toLocaleString()}
-                            <span className="text-zinc-500"> / {totalEnergy.toLocaleString()}</span>
-                        </span>
-                    </div>
-                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-                            style={{ width: `${totalEnergy > 0 ? (availableEnergy / totalEnergy) * 100 : 0}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* Bandwidth */}
-                <div>
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                        <div className="flex items-center gap-2 text-zinc-400">
-                            <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                            </svg>
-                            <span>Bandwidth</span>
-                        </div>
-                        <span className="text-zinc-300 tabular-nums">
-                            {isLoading ? '...' : availableBandwidth.toLocaleString()}
-                            <span className="text-zinc-500"> / {totalBandwidth.toLocaleString()}</span>
-                        </span>
-                    </div>
-                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
-                            style={{ width: `${totalBandwidth > 0 ? (availableBandwidth / totalBandwidth) * 100 : 0}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* TRX Balance info */}
-                <animated.div
-                    style={themeStore.backgroundStyle}
-                    className="p-3 rounded-xl mt-2"
-                >
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs text-zinc-500">Fee Tip</span>
-                        <span className="text-xs text-zinc-400">
-                            {walletStore.selectedToken === 'native'
-                                ? '~0.1 TRX per transfer'
-                                : 'Uses Energy or ~13 TRX'
-                            }
-                        </span>
-                    </div>
-                </animated.div>
-            </div>
-        </Panel>
-    );
-});

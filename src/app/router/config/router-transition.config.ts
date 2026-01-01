@@ -1,9 +1,8 @@
 import type { SpringConfig } from '@react-spring/web';
 import type { Route, TransitionType } from 'app/router/types';
 
-// ============================================================================
+
 // Spring Configs
-// ============================================================================
 
 /** Main transition spring - smooth page changes */
 export const transitionSpring: SpringConfig = {
@@ -23,9 +22,8 @@ export const rubberBandSpring: SpringConfig = {
   friction: 35,
 };
 
-// ============================================================================
+
 // Swipe Settings
-// ============================================================================
 
 /** Minimum distance (px) to trigger navigation */
 export const SWIPE_THRESHOLD = 80;
@@ -48,9 +46,7 @@ export const DRAG_SCALE_FACTOR = 0.0005;
 /** Minimum scale during drag */
 export const MIN_DRAG_SCALE = 0.95;
 
-// ============================================================================
 // Slide Animation Settings
-// ============================================================================
 
 /** Slide distance for neighbor pages (px) */
 export const SLIDE_DISTANCE = 400;
@@ -64,9 +60,7 @@ export const SLIDE_SCALE_IN = 0.95;
 /** Leave distance multiplier (less than enter for parallax) */
 export const SLIDE_LEAVE_FACTOR = 0.5;
 
-// ============================================================================
 // Tumble Animation Settings (far pages)
-// ============================================================================
 
 /** Scale for tumble animation */
 export const TUMBLE_SCALE = 0.6;
@@ -80,9 +74,9 @@ export const TUMBLE_ROTATE_X = 15;
 /** Z-depth for tumble */
 export const TUMBLE_Z_DEPTH = -200;
 
-// ============================================================================
+
 // Animation State Types
-// ============================================================================
+
 
 export interface TransitionAnimState {
   [key: string]: number; // Index signature for React Spring compatibility
@@ -106,9 +100,7 @@ export interface AnimConfig {
   leave: TransitionAnimState;
 }
 
-// ============================================================================
 // Animation States
-// ============================================================================
 
 export const DRAG_IDLE: DragAnimState = {
   dragX: 0,
@@ -125,9 +117,7 @@ export const TRANSITION_IDLE: TransitionAnimState = {
   z: 0,
 };
 
-// ============================================================================
 // Animation Generators
-// ============================================================================
 
 /**
  * Neighbor pages: horizontal slide with scale effect

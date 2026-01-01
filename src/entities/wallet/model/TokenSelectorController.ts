@@ -5,7 +5,7 @@ import {
     INACTIVE_STATE,
     TOKEN_BUTTON_CONFIG,
     type TokenButtonState,
-} from '../config/token-selector.config.ts';
+} from '../config/token-selector.config';
 import type { TokenId } from './types';
 
 // ============================================================================

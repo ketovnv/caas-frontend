@@ -2,6 +2,7 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import { AnimatedInputController } from 'shared/ui';
 import { AMOUNT_INPUT_PROPS, ADDRESS_INPUT_PROPS } from '../config';
 import { walletStore } from './wallet.store';
+import { resourceStore } from './resource.store';
 
 // ============================================================================
 // TRON Address Validation
@@ -36,9 +37,7 @@ export function getAddressError(address: string): string | null {
   return null;
 }
 
-// ============================================================================
 // Quick Amount Config
-// ============================================================================
 
 export const QUICK_AMOUNTS = [
   { label: '25%', value: 0.25 },
@@ -47,9 +46,7 @@ export const QUICK_AMOUNTS = [
   { label: 'MAX', value: 1 },
 ] as const;
 
-// ============================================================================
 // Transaction Form Store
-// ============================================================================
 
 class TransactionFormStore {
   // Controllers
@@ -71,9 +68,7 @@ class TransactionFormStore {
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Computed - derived from walletStore
-  // ─────────────────────────────────────────────────────────────────────────
 
   get balanceNum(): number {
     const balance = walletStore.currentTokenBalance;
@@ -100,9 +95,7 @@ class TransactionFormStore {
     return isValidTronAddress(this.address);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Actions
-  // ─────────────────────────────────────────────────────────────────────────
 
   setAmount = (value: string) => {
     this.amount = value;
@@ -123,7 +116,15 @@ class TransactionFormStore {
   };
 
   setQuickAmount = (percentage: number) => {
-    const quickAmount = this.balanceNum * percentage;
+    let quickAmount: number;
+
+    if (percentage === 1 && walletStore.selectedToken === 'native') {
+      // For MAX on TRX: subtract bandwidth fee if needed
+      quickAmount = resourceStore.getMaxSendableTrx(this.balanceNum);
+    } else {
+      quickAmount = this.balanceNum * percentage;
+    }
+
     this.amount = quickAmount.toFixed(6);
     this.amountCtrl.animateTo(quickAmount);
     this.error = null;
@@ -179,8 +180,6 @@ class TransactionFormStore {
   };
 }
 
-// ============================================================================
 // Singleton
-// ============================================================================
 
 export const transactionFormStore = new TransactionFormStore();

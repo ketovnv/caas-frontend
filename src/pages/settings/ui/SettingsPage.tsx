@@ -5,9 +5,7 @@ import { networkStore, settingsStore, themeStore } from 'shared/model';
 import { cn } from 'shared/lib';
 import type { NetworkId } from 'entities/wallet/config/networks.config';
 
-// ============================================================================
 // Toggle Switch Component
-// ============================================================================
 
 interface ToggleSwitchProps {
     checked: boolean;
@@ -47,9 +45,7 @@ function ToggleSwitch({ checked, onChange, label, description }: ToggleSwitchPro
     );
 }
 
-// ============================================================================
 // Network Selector Component
-// ============================================================================
 
 const NetworkSelector = observer(function NetworkSelector() {
     const handleNetworkChange = async (networkId: NetworkId) => {
@@ -97,9 +93,7 @@ const NetworkSelector = observer(function NetworkSelector() {
     );
 });
 
-// ============================================================================
 // Theme Selector Component
-// ============================================================================
 
 const ThemeSelector = observer(function ThemeSelector() {
     return (
@@ -144,9 +138,7 @@ const ThemeSelector = observer(function ThemeSelector() {
     );
 });
 
-// ============================================================================
 // Settings Page - Desktop: cards in grid, with animations
-// ============================================================================
 
 export const SettingsPage = observer(function SettingsPage() {
     // Trail animation for cards (3 cards)

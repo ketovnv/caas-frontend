@@ -1,9 +1,7 @@
 import type { ChainId } from '../model/types';
 import { networkStore } from 'shared/model';
 
-// ============================================================================
 // Token Configuration - TRC-20 tokens (Tron only)
-// ============================================================================
 
 export type TokenId = 'native' | 'usdt';
 
@@ -18,9 +16,7 @@ export interface TokenConfig {
   icon?: string;
 }
 
-// ============================================================================
 // Token Definitions
-// ============================================================================
 
 export const NATIVE_TOKEN: TokenConfig = {
   id: 'native',
@@ -41,9 +37,7 @@ export const USDT_TOKEN: TokenConfig = {
   },
 };
 
-// ============================================================================
 // Token Registry
-// ============================================================================
 
 export const TOKENS: Record<TokenId, TokenConfig> = {
   native: NATIVE_TOKEN,
@@ -68,9 +62,7 @@ export function getTokenConfig(tokenId: TokenId): TokenConfig {
   return TOKENS[tokenId] ?? NATIVE_TOKEN;
 }
 
-// ============================================================================
 // Dynamic Token Address (uses networkStore)
-// ============================================================================
 
 /**
  * Get the appropriate token address based on current network

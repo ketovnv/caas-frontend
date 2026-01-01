@@ -2,9 +2,7 @@ import { useTrail, animated, useSpring } from '@react-spring/web';
 import { observer } from 'mobx-react-lite';
 import { themeStore } from 'shared/model';
 
-// ============================================================================
 // Types
-// ============================================================================
 
 interface StatItem {
   label: string;
@@ -35,16 +33,12 @@ const RECENT_ACTIVITY = [
   { type: 'in', amount: '+300.00', from: 'Faucet', time: '3 часа' },
 ];
 
-// ============================================================================
 // Component
-// ============================================================================
 
 export const StatsSection = observer(function StatsSection({
   isActive = true
 }: StatsSectionProps) {
-  // ─────────────────────────────────────────────────────────────────────────
   // Trail animation for stats cards (staggered vertical entry)
-  // ─────────────────────────────────────────────────────────────────────────
 
   const statsTrail = useTrail(STATS.length, {
     from: { opacity: 0, y: 20 },
@@ -56,9 +50,9 @@ export const StatsSection = observer(function StatsSection({
     delay: 100,
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
+
   // Trail animation for activity items (delayed stagger)
-  // ─────────────────────────────────────────────────────────────────────────
+
 
   const activityTrail = useTrail(RECENT_ACTIVITY.length, {
     from: { opacity: 0, y: 15, scale: 0.95 },
@@ -71,9 +65,9 @@ export const StatsSection = observer(function StatsSection({
     delay: 250, // Start after stats
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
+
   // Section header animation
-  // ─────────────────────────────────────────────────────────────────────────
+
 
   const headerSpring = useSpring({
     from: { opacity: 0, y: 10 },
@@ -131,7 +125,6 @@ export const StatsSection = observer(function StatsSection({
         >
           Последняя активность
         </animated.h3>
-
         <div className="space-y-2">
           {activityTrail.map((spring, i) => {
             const activity = RECENT_ACTIVITY[i]!;

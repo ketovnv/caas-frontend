@@ -1,8 +1,6 @@
 import { Controller, to, type SpringConfig, type Interpolation } from '@react-spring/core';
 
-// ============================================================================
 // Animation States (only for interactive effects, not entrance)
-// ============================================================================
 
 interface ItemInteractiveState {
   scale: number;
@@ -30,9 +28,7 @@ const SPRING_CONFIG: SpringConfig = {
   mass: 0.8,
 };
 
-// ============================================================================
 // Currency Item Controller - Hover/Select effects only
-// ============================================================================
 
 export class CurrencyItemController {
   private ctrl: Controller<ItemInteractiveState>;
@@ -81,9 +77,7 @@ export class CurrencyItemController {
   }
 }
 
-// ============================================================================
 // Currency List Controller - Manages item interactions
-// ============================================================================
 
 export class CurrencyListController {
   private items: CurrencyItemController[] = [];

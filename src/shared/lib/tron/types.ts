@@ -60,7 +60,8 @@ export interface TronConstants {
 
   // Bandwidth
   bandwidthUnitPrice: number;   // sun per bandwidth (1000 sun = 0.001 TRX)
-  bandwidthPerTrc20Transfer: number;   // ~350 bytes
+  bandwidthPerTrc20Transfer: number;   // ~350 bytes for TRC-20
+  bandwidthPerTrxTransfer: number;     // ~268 bytes for native TRX
 
   // Activation
   accountActivationFee: number; // 1 TRX for new account
@@ -80,6 +81,7 @@ export const DEFAULT_TRON_CONSTANTS: TronConstants = {
   energyPerUsdtTransferExisting: 29000,    // Existing recipient
   bandwidthUnitPrice: 1000,                // 1000 sun = 0.001 TRX
   bandwidthPerTrc20Transfer: 350,          // ~350 bytes
+  bandwidthPerTrxTransfer: 268,            // ~268 bytes for native TRX
   accountActivationFee: 1_000_000,         // 1 TRX in sun
   updatedAt: Date.now(),
 };

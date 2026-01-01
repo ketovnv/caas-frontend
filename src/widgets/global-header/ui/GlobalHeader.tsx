@@ -3,9 +3,7 @@ import { MorphingText, AnimatedText } from 'shared/ui';
 import { router, routeConfigs } from 'app/router';
 import { RAINBOWGRADIENT, type OklchTuple } from '@/shared';
 
-// ============================================================================
 // GlobalHeader - App-level header with morphing title
-// ============================================================================
 
 export const GlobalHeader = observer(function GlobalHeader() {
   const config = routeConfigs[router.currentRoute];

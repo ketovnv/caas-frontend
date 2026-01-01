@@ -1,14 +1,9 @@
-// ============================================================================
 // TRON RPC Provider Manager
-// ============================================================================
-// Manages multiple RPC providers with rate limiting, health checks, and fallback
-
 import { TronWeb } from 'tronweb';
 import { makeAutoObservable, runInAction } from 'mobx';
+import { networkStore } from 'shared/model';
 
-// ============================================================================
 // Types
-// ============================================================================
 
 export interface RpcProviderConfig {
   /** Unique provider ID */
@@ -61,9 +56,7 @@ export interface RpcProviderStats {
   totalErrors: number;
 }
 
-// ============================================================================
 // Default Providers
-// ============================================================================
 
 /** Nile Testnet providers */
 export const NILE_TESTNET_PROVIDERS: RpcProviderConfig[] = [
@@ -110,9 +103,7 @@ export const MAINNET_PROVIDERS: RpcProviderConfig[] = [
   // QuickNode can be added here with API key
 ];
 
-// ============================================================================
 // RpcProviderManager
-// ============================================================================
 
 class RpcProviderManager {
   /** Available providers */
@@ -130,8 +121,8 @@ class RpcProviderManager {
   /** Rate limit window duration (ms) */
   private readonly RATE_LIMIT_WINDOW = 1000;
 
-  /** Health check interval (ms) */
-  private readonly HEALTH_CHECK_INTERVAL = 30000;
+  // Health check interval disabled - checks happen on-demand when requests fail
+  // private readonly HEALTH_CHECK_INTERVAL = 300000;
 
   /** Max consecutive errors before marking unhealthy */
   private readonly MAX_CONSECUTIVE_ERRORS = 3;
@@ -149,9 +140,7 @@ class RpcProviderManager {
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Getters
-  // ─────────────────────────────────────────────────────────────────────────
 
   /** Get all providers */
   get providers(): RpcProviderConfig[] {
@@ -234,9 +223,8 @@ class RpcProviderManager {
     return Math.max(0, provider.rateLimit - health.requestCount);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+
   // Initialization
-  // ─────────────────────────────────────────────────────────────────────────
 
   /**
    * Initialize with providers
@@ -258,8 +246,9 @@ class RpcProviderManager {
       this._activeProviderId = first?.id || null;
     });
 
-    // Start health checks
-    this.startHealthChecks();
+    // Health checks disabled - we check health on-demand when requests fail
+    // This avoids unnecessary API calls and rate limit issues
+    // this.startHealthChecks();
 
     console.log('[RpcProviderManager] Initialized with providers:', providers.map(p => p.name));
   }
@@ -317,9 +306,7 @@ class RpcProviderManager {
     };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // TronWeb Access
-  // ─────────────────────────────────────────────────────────────────────────
+    // TronWeb Access
 
   /**
    * Get TronWeb instance for active provider
@@ -444,9 +431,7 @@ class RpcProviderManager {
     throw lastError || new Error('All RPC providers failed');
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Rate Limiting
-  // ─────────────────────────────────────────────────────────────────────────
+    // Rate Limiting
 
   private checkRateLimit(providerId: string): boolean {
     const provider = this._providers.find(p => p.id === providerId);
@@ -530,19 +515,17 @@ class RpcProviderManager {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   // Health Checks
-  // ─────────────────────────────────────────────────────────────────────────
 
-  private startHealthChecks() {
-    if (this._healthCheckTimer) {
-      clearInterval(this._healthCheckTimer);
-    }
-
-    this._healthCheckTimer = setInterval(() => {
-      this.performHealthChecks();
-    }, this.HEALTH_CHECK_INTERVAL);
-  }
+  // Disabled - health is checked on-demand when requests fail
+  // private startHealthChecks() {
+  //   if (this._healthCheckTimer) {
+  //     clearInterval(this._healthCheckTimer);
+  //   }
+  //   this._healthCheckTimer = setInterval(() => {
+  //     this.performHealthChecks();
+  //   }, this.HEALTH_CHECK_INTERVAL);
+  // }
 
   private async performHealthChecks() {
     for (const provider of this._providers) {
@@ -572,9 +555,7 @@ class RpcProviderManager {
     return this._health;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Utilities
-  // ─────────────────────────────────────────────────────────────────────────
+    // Utilities
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -648,11 +629,9 @@ class RpcProviderManager {
   }
 }
 
-// ============================================================================
 // Singleton Export
-// ============================================================================
 
 export const rpcProviderManager = new RpcProviderManager();
 
-// Initialize with default testnet providers
-rpcProviderManager.initialize(NILE_TESTNET_PROVIDERS);
+// Initialize with providers from persisted network selection
+rpcProviderManager.initialize(networkStore.config.rpcProviders);
