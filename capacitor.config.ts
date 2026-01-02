@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.reactsprings.caas',
+  appId: 'com.gaslesswallet.caas',
   appName: 'CaaS',
   webDir: 'dist',
 

@@ -104,8 +104,8 @@ class AuthStore {
           this.walletType = 'web3auth';
         });
 
-        // Fetch balances after session restore
-        walletStore.fetchBalances();
+        // Fetch balances and resources after session restore
+        walletStore.refreshAll();
         walletStore.startAutoRefresh();
 
         // Welcome back haptic
@@ -242,7 +242,7 @@ class AuthStore {
         });
       });
 
-      walletStore.fetchBalances();
+      walletStore.refreshAll();
       walletStore.startAutoRefresh();
 
     } catch (error) {

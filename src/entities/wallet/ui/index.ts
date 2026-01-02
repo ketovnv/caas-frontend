@@ -1,6 +1,7 @@
 export * from 'entities/wallet/ui/BalanceDisplay'
 export * from 'entities/wallet/ui/CurrencyList'
 export * from 'entities/wallet/ui/NotesSection'
+export * from 'entities/wallet/ui/ResourceWidget'
 export * from 'entities/wallet/ui/StatsSection.tsx'
 export * from 'entities/wallet/ui/TokenSelector'
 export * from 'entities/wallet/ui/TransactionForm'

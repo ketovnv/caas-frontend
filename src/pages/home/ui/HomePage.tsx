@@ -113,7 +113,7 @@ export const HomePage = observer(function HomePage() {
                         )}
                     </animated.div>
 
-                    {/* Panel 3: Transaction Cost (unified for TRX and USDT) */}
+                    {/* Panel 3: Transaction Cost (adapts to TRX/USDT) */}
                     <animated.div
                         style={{
                             opacity: trail[2]?.opacity,

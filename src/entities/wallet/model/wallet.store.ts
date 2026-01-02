@@ -216,13 +216,6 @@ class WalletStore {
         await this.fetchTokenBalance(provider, 'tron', 'usdt');
         console.log('[WalletStore] USDT balance done');
 
-        // Fetch resources (energy & bandwidth)
-        const address = this.currentAddress;
-        if (address) {
-            await resourceStore.fetchResources(address);
-            console.log('[WalletStore] Resources done');
-        }
-
         runInAction(() => {
             this.isRefreshing = false;
         });
@@ -403,8 +396,8 @@ class WalletStore {
 
             hapticsStore.play('success');
 
-            // Refresh balances
-            await this.fetchBalances();
+            // Refresh balances and resources (force refresh, no cache)
+            await this.refreshAll();
 
             return txHash;
         } catch (error) {
@@ -435,6 +428,12 @@ class WalletStore {
             this.refreshAll();
         }, AUTO_REFRESH_INTERVAL);
 
+        // Start resource auto-refresh (every 60s)
+        const address = this.currentAddress;
+        if (address) {
+            resourceStore.startAutoRefresh(address);
+        }
+
         console.log('[WalletStore] Auto-refresh started (every 20s)');
     };
 
@@ -445,6 +444,8 @@ class WalletStore {
             this._refreshInterval = null;
             console.log('[WalletStore] Auto-refresh stopped');
         }
+        // Also stop resource auto-refresh
+        resourceStore.stopAutoRefresh();
     };
 
     /** Refresh all data (balances + resources) */

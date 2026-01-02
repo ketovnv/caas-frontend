@@ -32,6 +32,30 @@ function BandwidthIcon({ className }: { className?: string }) {
   );
 }
 
+function RefreshIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  );
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function formatTimeSince(timestamp: number | null): string {
+  if (!timestamp) return '';
+
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+
+  if (seconds < 60) return 'щойно';
+  if (seconds < 120) return '1 хв';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} хв`;
+
+  return `${Math.floor(seconds / 3600)} год`;
+}
+
 // Resource Bar
 
 interface ResourceBarProps {
@@ -91,6 +115,8 @@ export const TransactionCost = observer(function TransactionCost({
     trxTransferCost,
     isTrxTransferFree,
     isLoadingResources,
+    resourcesError,
+    lastUpdated,
   } = resourceStore;
   const { currentAddress, currentBalance, selectedToken } = walletStore;
 
@@ -111,12 +137,45 @@ export const TransactionCost = observer(function TransactionCost({
     }
   }, [currentAddress, recipientAddress, amount, isNative, networkStore.selectedNetwork]);
 
+  // Manual refresh handler
+  const handleRefresh = async () => {
+    if (currentAddress && !isLoadingResources) {
+      await resourceStore.refresh(currentAddress);
+    }
+  };
+
   // Don't show if no address
   if (!currentAddress) {
     return null;
   }
 
   const isLoading = isLoadingResources || isEstimating;
+
+  // Error state
+  if (resourcesError && !resourceStore.resources) {
+    return (
+      <div className={cn(
+        'p-4 rounded-2xl',
+        'bg-zinc-900/60 backdrop-blur-sm',
+        'border border-red-500/30',
+        className
+      )}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-red-400">Помилка завантаження</span>
+          <button
+            onClick={handleRefresh}
+            disabled={isLoadingResources}
+            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors"
+          >
+            <RefreshIcon className={cn('w-4 h-4', isLoadingResources && 'animate-spin')} />
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500">
+          Не вдалося отримати ресурси. Спробуйте оновити.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -132,9 +191,28 @@ export const TransactionCost = observer(function TransactionCost({
         <animated.span style={themeStore.grayStyle} className="text-sm font-medium">
           {isNative ? 'Вартість TRX переказу' : 'Вартість USDT переказу'}
         </animated.span>
-        {isLoading && (
-          <div className="w-4 h-4 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
-        )}
+        <div className="flex items-center gap-2">
+          {/* Last updated */}
+          {lastUpdated && !isLoading && (
+            <span className="text-xs text-zinc-600">
+              {formatTimeSince(lastUpdated)}
+            </span>
+          )}
+          {/* Refresh button */}
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className={cn(
+              'p-1.5 rounded-lg',
+              'text-zinc-500 hover:text-zinc-300',
+              'hover:bg-zinc-800/50',
+              'transition-colors duration-200',
+              'disabled:opacity-50'
+            )}
+          >
+            <RefreshIcon className={cn('w-4 h-4', isLoading && 'animate-spin')} />
+          </button>
+        </div>
       </div>
 
       {/* TRX Transfer - Bandwidth only */}

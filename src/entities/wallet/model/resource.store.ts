@@ -10,6 +10,13 @@ import {
 import { remoteConfigStore } from 'shared/lib/remote-config';
 import { getTokenAddress } from '../config/tokens';
 
+// ============================================================================
+// Configuration
+// ============================================================================
+
+/** Auto-refresh interval for resources (1 minute) */
+const RESOURCE_REFRESH_INTERVAL = 60_000;
+
 // ResourceStore
 
 class ResourceStore {
@@ -23,12 +30,22 @@ class ResourceStore {
   isEstimating = false;
   estimateError: string | null = null;
 
+  // Last update timestamp
+  lastUpdated: number | null = null;
+
   // Last addresses used (for caching/debouncing)
   private _lastWalletAddress: string | null = null;
   private _lastRecipientAddress: string | null = null;
+K
+  // Auto-refresh interval
+  private _refreshInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    makeAutoObservable(this);
+    makeAutoObservable<ResourceStore, '_lastWalletAddress' | '_lastRecipientAddress' | '_refreshInterval'>(this, {
+      _lastWalletAddress: false,
+      _lastRecipientAddress: false,
+      _refreshInterval: false,
+    });
   }
 
   // Computed
@@ -159,10 +176,21 @@ class ResourceStore {
 
       const resources = await tronResourceService.getWalletResources(walletAddress);
 
+      // Handle null response (API error caught internally)
+      if (!resources) {
+        runInAction(() => {
+          this.resourcesError = 'Не вдалося отримати ресурси';
+          this.isLoadingResources = false;
+        });
+        return null;
+      }
+
       runInAction(() => {
         this.resources = resources;
+        this.resourcesError = null; // Clear previous errors
         this._lastWalletAddress = walletAddress;
         this.isLoadingResources = false;
+        this.lastUpdated = Date.now();
       });
 
       return resources;
@@ -266,14 +294,50 @@ class ResourceStore {
    * Reset all state
    */
   reset = () => {
+    this.stopAutoRefresh();
     this.resources = null;
     this.costEstimate = null;
     this.isLoadingResources = false;
     this.isEstimating = false;
     this.resourcesError = null;
     this.estimateError = null;
+    this.lastUpdated = null;
     this._lastWalletAddress = null;
     this._lastRecipientAddress = null;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Auto-Refresh (every minute)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Start auto-refresh for resources
+   * @param walletAddress - Address to refresh resources for
+   */
+  startAutoRefresh = (walletAddress: string) => {
+    this.stopAutoRefresh();
+
+    if (!walletAddress) return;
+
+    this._refreshInterval = setInterval(async () => {
+      // Force refresh by clearing cache
+      this._lastWalletAddress = null;
+      await this.fetchResources(walletAddress);
+      console.log('[ResourceStore] Auto-refreshed resources');
+    }, RESOURCE_REFRESH_INTERVAL);
+
+    console.log('[ResourceStore] Auto-refresh started (every 60s)');
+  };
+
+  /**
+   * Stop auto-refresh
+   */
+  stopAutoRefresh = () => {
+    if (this._refreshInterval) {
+      clearInterval(this._refreshInterval);
+      this._refreshInterval = null;
+      console.log('[ResourceStore] Auto-refresh stopped');
+    }
   };
 }
 
